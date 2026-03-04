@@ -149,6 +149,22 @@
     color: var(--muted);
     line-height: 1.6;
   }
+  .news-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--accent);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .news-link:hover { opacity: 0.8; text-decoration: underline; }
+  .news-link-source {
+    color: var(--muted);
+    font-size: 0.75rem;
+    margin-left: 4px;
+  }
   .news-tag {
     display: inline-block;
     font-size: 0.7rem;
@@ -302,30 +318,42 @@ const ASSETS = [
 const NEWS_ITEMS = [
   {
     title: '米国・イスラエルのイラン攻撃でホルムズ海峡が事実上閉鎖',
-    body: '米国とイスラエルによるイラン攻撃を受け、保険会社や大手石油企業がホルムズ海峡からの撤退を開始。世界の石油供給の約20%が影響を受け、原油価格は年初来36%上昇。インフレ再加速への懸念が強まっています。'
+    body: '米国とイスラエルによるイラン攻撃を受け、保険会社や大手石油企業がホルムズ海峡からの撤退を開始。世界の石油供給の約20%が影響を受け、原油価格は年初来36%上昇。インフレ再加速への懸念が強まっています。',
+    url: 'https://translate.google.com/translate?sl=en&tl=ja&u=https%3A%2F%2Fwww.aljazeera.com%2Feconomy%2F2026%2F3%2F3%2Fshutdown-of-hormuz-strait-raises-fears-of-soaring-oil-prices',
+    source: 'Al Jazeera（日本語翻訳）'
   },
   {
     title: 'トランプ関税: 通商法122条に基づく新たな一律10%関税を発動',
-    body: '最高裁がIEEPA関税を違憲と判断した後、トランプ政権は通商法122条に基づき全世界対象の一律10%関税を発動。15%への引き上げも示唆しており、日本の対米関税率は13.5〜15.4%に上昇する見通し。'
+    body: '最高裁がIEEPA関税を違憲と判断した後、トランプ政権は通商法122条に基づき全世界対象の一律10%関税を発動。15%への引き上げも示唆しており、日本の対米関税率は13.5〜15.4%に上昇する見通し。',
+    url: 'https://www.newsweekjapan.jp/stories/world/2026/03/589078.php',
+    source: 'Newsweek Japan'
   },
   {
     title: 'ビットコイン急反発 — 地政学リスクの中でデジタルゴールドとして注目',
-    body: 'BTCが24時間で+5.3%上昇。中東紛争による金価格高騰と連動し、ビットコインの「デジタルゴールド」としてのヘッジ需要が再評価されています。機関投資家の資金流入も増加傾向。'
+    body: 'BTCが24時間で+5.3%上昇。中東紛争による金価格高騰と連動し、ビットコインの「デジタルゴールド」としてのヘッジ需要が再評価されています。機関投資家の資金流入も増加傾向。',
+    url: 'https://translate.google.com/translate?sl=en&tl=ja&u=https%3A%2F%2Fwww.cnbc.com%2F2026%2F03%2F04%2Firan-israel-us-war-middle-east-conflict-oil-gas-lng-surge-central-banks-inflation-risk.html',
+    source: 'CNBC（日本語翻訳）'
   }
 ];
 
 const TREND_ITEMS = [
   {
     title: '🏟️ #WBC2026 — ワールド・ベースボール・クラシック開幕',
-    body: '3月5日にWBC2026が開幕。侍ジャパンの東京ドームでの初戦に注目が集まり、大谷翔平選手の出場についての話題で盛り上がっています。Netflixでの独占配信も話題に。'
+    body: '3月5日にWBC2026が開幕。侍ジャパンの東京ドームでの初戦に注目が集まり、大谷翔平選手の出場についての話題で盛り上がっています。Netflixでの独占配信も話題に。',
+    url: 'https://x.com/search?q=%23WBC2026&src=trend_click',
+    source: 'X トレンド'
   },
   {
     title: '⛽ #原油高 #ガソリン価格 — エネルギー価格上昇への懸念',
-    body: 'ホルムズ海峡危機を受け、日本国内でもガソリン価格上昇への不安が広がっています。「補助金延長」「電気代やばい」などの声がトレンド入り。'
+    body: 'ホルムズ海峡危機を受け、日本国内でもガソリン価格上昇への不安が広がっています。「補助金延長」「電気代やばい」などの声がトレンド入り。',
+    url: 'https://x.com/search?q=%23%E5%8E%9F%E6%B2%B9%E9%AB%98&src=trend_click',
+    source: 'X トレンド'
   },
   {
     title: '📱 #トランプ関税 — 日本経済への影響議論',
-    body: '新関税が日本の輸出企業に与える影響について議論が白熱。自動車・半導体関連企業への影響を懸念する声が多数。円安・株安のダブルパンチへの不安も。'
+    body: '新関税が日本の輸出企業に与える影響について議論が白熱。自動車・半導体関連企業への影響を懸念する声が多数。円安・株安のダブルパンチへの不安も。',
+    url: 'https://x.com/search?q=%23%E3%83%88%E3%83%A9%E3%83%B3%E3%83%97%E9%96%A2%E7%A8%8E&src=trend_click',
+    source: 'X トレンド'
   }
 ];
 
@@ -370,6 +398,9 @@ function renderNews() {
       <span class="news-tag tag-news">NEWS</span>
       <h3>${item.title}</h3>
       <p>${item.body}</p>
+      <a class="news-link" href="${item.url}" target="_blank" rel="noopener noreferrer">
+        🔗 元記事を読む <span class="news-link-source">— ${item.source}</span>
+      </a>
     `;
     grid.appendChild(card);
   });
@@ -385,6 +416,9 @@ function renderTrends() {
       <span class="news-tag tag-trend">TREND</span>
       <h3>${item.title}</h3>
       <p>${item.body}</p>
+      <a class="news-link" href="${item.url}" target="_blank" rel="noopener noreferrer">
+        🔗 Xで見る <span class="news-link-source">— ${item.source}</span>
+      </a>
     `;
     grid.appendChild(card);
   });
