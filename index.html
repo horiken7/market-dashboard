@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>マーケットダッシュボード</title>
+<title>Market Dashboard</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap');
   :root {
     --bg: #0d1117;
     --card: #161b22;
@@ -32,9 +33,17 @@
     flex-wrap: wrap;
     gap: 12px;
   }
-  .header h1 {
-    font-size: 1.6rem;
-    background: linear-gradient(135deg, var(--accent), var(--gold));
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .brand h1 {
+    font-family: 'Inter', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 900;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent) 0%, #b388ff 50%, var(--gold) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
@@ -188,7 +197,9 @@
 <body>
 
 <div class="header">
-  <h1>マーケットダッシュボード</h1>
+  <div class="brand">
+    <h1>Market Dashboard</h1>
+  </div>
   <div class="header-right">
     <span class="update-time" id="updateTime">読み込み中...</span>
     <button class="refresh-btn" id="refreshBtn" onclick="refreshAll()">
