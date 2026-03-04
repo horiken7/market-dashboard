@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>マーケットダッシュボード</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --accent: #58a6ff;
+    --gold: #f0c040;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .header h1 {
+    font-size: 1.6rem;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .update-time {
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .refresh-btn {
+    background: linear-gradient(135deg, #238636, #2ea043);
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .refresh-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .refresh-btn:active { transform: translateY(0); }
+  .refresh-btn.loading { opacity: 0.7; pointer-events: none; }
+  .refresh-btn .spinner {
+    display: none;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .refresh-btn.loading .spinner { display: inline-block; }
+  .refresh-btn.loading .btn-text { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .card-price {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .card-change {
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .card-change.up { color: var(--green); }
+  .card-change.down { color: var(--red); }
+  .card-note {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  .section-title {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+    padding-left: 12px;
+    border-left: 3px solid var(--accent);
+  }
+  .section-title.gold-border { border-left-color: var(--gold); }
+
+  .news-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 500px) {
+    .news-grid { grid-template-columns: 1fr; }
+  }
+  .news-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .news-card h3 {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+  .news-card p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .news-tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .tag-news { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .tag-trend { background: rgba(240,192,64,0.15); color: var(--gold); }
+
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.75rem;
+    padding: 20px 0;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>マーケットダッシュボード</h1>
+  <div class="header-right">
+    <span class="update-time" id="updateTime">読み込み中...</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshAll()">
+      <span class="spinner"></span>
+      <span class="btn-text">🔄 更新</span>
+    </button>
+  </div>
+</div>
+
+<div class="grid" id="priceGrid"></div>
+
+<h2 class="section-title">📰 価格に影響を及ぼした重要ニュース</h2>
+<div class="news-grid" id="newsGrid"></div>
+
+<h2 class="section-title gold-border">🔥 Xで話題のトレンド</h2>
+<div class="news-grid" id="trendGrid"></div>
+
+<div class="footer">
+  <p>※ 投資信託の基準価額は前営業日の終値です。暗号資産はリアルタイム参考価格です。</p>
+  <p>※ 為替・金価格は市場が開いている場合はリアルタイム、閉まっている場合は直近の終値です。</p>
+  <p>データ取得元: 各種金融情報API（参考値）</p>
+</div>
+
+<script>
+const ASSETS = [
+  {
+    id: 'usdjpy',
+    label: 'USD/JPY',
+    price: 157.69,
+    prevPrice: 157.47,
+    unit: '円',
+    prefix: '',
+    decimals: 2,
+    note: 'リアルタイム為替レート',
+    source: 'forex'
+  },
+  {
+    id: 'gold',
+    label: '金価格 (USD/oz)',
+    price: 5154.85,
+    prevPrice: 5131.85,
+    unit: '',
+    prefix: '$',
+    decimals: 2,
+    note: 'スポット価格（ドル建て）',
+    source: 'commodity'
+  },
+  {
+    id: 'emaxis_world',
+    label: 'eMAXIS Slim 全世界株式(除く日本)',
+    price: 34831,
+    prevPrice: 34779,
+    unit: '円',
+    prefix: '',
+    decimals: 0,
+    note: '基準価額（3/3時点）',
+    source: 'fund'
+  },
+  {
+    id: 'emaxis_sp500',
+    label: 'eMAXIS Slim S&P500',
+    price: 39699,
+    prevPrice: 39439,
+    unit: '円',
+    prefix: '',
+    decimals: 0,
+    note: '基準価額（3/3時点）',
+    source: 'fund'
+  },
+  {
+    id: 'nasdaq100',
+    label: 'NASDAQ 100',
+    price: 20529.19,
+    prevPrice: 20322.51,
+    unit: '',
+    prefix: '',
+    decimals: 2,
+    note: '指数値（3/4終値）',
+    source: 'index'
+  },
+  {
+    id: 'tracers_sp500gold',
+    label: 'Tracers S&P500ゴールドプラス',
+    price: 49015,
+    prevPrice: 48148,
+    unit: '円',
+    prefix: '',
+    decimals: 0,
+    note: '基準価額（3/3時点）',
+    source: 'fund'
+  },
+  {
+    id: 'tracers_nasdaqgold',
+    label: 'Tracers NASDAQ100ゴールドプラス',
+    price: 18842,
+    prevPrice: 18521,
+    unit: '円',
+    prefix: '',
+    decimals: 0,
+    note: '基準価額（3/3時点）',
+    source: 'fund'
+  },
+  {
+    id: 'btcusdt',
+    label: 'BTC/USDT',
+    price: 71020.29,
+    prevPrice: 67449.00,
+    unit: '',
+    prefix: '$',
+    decimals: 2,
+    note: '暗号資産（24h参考価格）',
+    source: 'crypto'
+  },
+  {
+    id: 'solusdt',
+    label: 'SOL/USDT',
+    price: 92.08,
+    prevPrice: 84.57,
+    unit: '',
+    prefix: '$',
+    decimals: 2,
+    note: '暗号資産（24h参考価格）',
+    source: 'crypto'
+  }
+];
+
+const NEWS_ITEMS = [
+  {
+    title: '米国・イスラエルのイラン攻撃でホルムズ海峡が事実上閉鎖',
+    body: '米国とイスラエルによるイラン攻撃を受け、保険会社や大手石油企業がホルムズ海峡からの撤退を開始。世界の石油供給の約20%が影響を受け、原油価格は年初来36%上昇。インフレ再加速への懸念が強まっています。'
+  },
+  {
+    title: 'トランプ関税: 通商法122条に基づく新たな一律10%関税を発動',
+    body: '最高裁がIEEPA関税を違憲と判断した後、トランプ政権は通商法122条に基づき全世界対象の一律10%関税を発動。15%への引き上げも示唆しており、日本の対米関税率は13.5〜15.4%に上昇する見通し。'
+  },
+  {
+    title: 'ビットコイン急反発 — 地政学リスクの中でデジタルゴールドとして注目',
+    body: 'BTCが24時間で+5.3%上昇。中東紛争による金価格高騰と連動し、ビットコインの「デジタルゴールド」としてのヘッジ需要が再評価されています。機関投資家の資金流入も増加傾向。'
+  }
+];
+
+const TREND_ITEMS = [
+  {
+    title: '🏟️ #WBC2026 — ワールド・ベースボール・クラシック開幕',
+    body: '3月5日にWBC2026が開幕。侍ジャパンの東京ドームでの初戦に注目が集まり、大谷翔平選手の出場についての話題で盛り上がっています。Netflixでの独占配信も話題に。'
+  },
+  {
+    title: '⛽ #原油高 #ガソリン価格 — エネルギー価格上昇への懸念',
+    body: 'ホルムズ海峡危機を受け、日本国内でもガソリン価格上昇への不安が広がっています。「補助金延長」「電気代やばい」などの声がトレンド入り。'
+  },
+  {
+    title: '📱 #トランプ関税 — 日本経済への影響議論',
+    body: '新関税が日本の輸出企業に与える影響について議論が白熱。自動車・半導体関連企業への影響を懸念する声が多数。円安・株安のダブルパンチへの不安も。'
+  }
+];
+
+function formatNumber(num, decimals) {
+  return num.toLocaleString('ja-JP', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  });
+}
+
+function renderPrices() {
+  const grid = document.getElementById('priceGrid');
+  grid.innerHTML = '';
+  ASSETS.forEach(asset => {
+    const change = asset.price - asset.prevPrice;
+    const changePercent = ((change / asset.prevPrice) * 100);
+    const isUp = change >= 0;
+    const arrow = isUp ? '▲' : '▼';
+    const cls = isUp ? 'up' : 'down';
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-label">${asset.label}</div>
+      <div class="card-price">${asset.prefix}${formatNumber(asset.price, asset.decimals)} ${asset.unit}</div>
+      <div class="card-change ${cls}">
+        ${arrow} ${isUp ? '+' : ''}${formatNumber(change, asset.decimals)} (${isUp ? '+' : ''}${changePercent.toFixed(2)}%)
+      </div>
+      <div class="card-note">${asset.note}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderNews() {
+  const grid = document.getElementById('newsGrid');
+  grid.innerHTML = '';
+  NEWS_ITEMS.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'news-card';
+    card.innerHTML = `
+      <span class="news-tag tag-news">NEWS</span>
+      <h3>${item.title}</h3>
+      <p>${item.body}</p>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderTrends() {
+  const grid = document.getElementById('trendGrid');
+  grid.innerHTML = '';
+  TREND_ITEMS.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'news-card';
+    card.innerHTML = `
+      <span class="news-tag tag-trend">TREND</span>
+      <h3>${item.title}</h3>
+      <p>${item.body}</p>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function updateTimestamp() {
+  const now = new Date();
+  const opts = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' };
+  document.getElementById('updateTime').textContent = '最終更新: ' + now.toLocaleString('ja-JP', opts) + ' (JST)';
+}
+
+async function fetchCryptoPrice(symbol) {
+  try {
+    const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`);
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    return {
+      price: parseFloat(data.lastPrice),
+      prevPrice: parseFloat(data.lastPrice) - parseFloat(data.priceChange)
+    };
+  } catch (e) {
+    console.warn(`Failed to fetch ${symbol}:`, e);
+    return null;
+  }
+}
+
+async function fetchForexRate() {
+  try {
+    const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    return data.rates.JPY;
+  } catch (e) {
+    console.warn('Failed to fetch forex:', e);
+    return null;
+  }
+}
+
+async function refreshAll() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('loading');
+
+  try {
+    const [btcData, solData, forexRate] = await Promise.all([
+      fetchCryptoPrice('BTCUSDT'),
+      fetchCryptoPrice('SOLUSDT'),
+      fetchForexRate()
+    ]);
+
+    if (btcData) {
+      const btc = ASSETS.find(a => a.id === 'btcusdt');
+      btc.prevPrice = btcData.prevPrice;
+      btc.price = btcData.price;
+      btc.note = '暗号資産（リアルタイム）';
+    }
+    if (solData) {
+      const sol = ASSETS.find(a => a.id === 'solusdt');
+      sol.prevPrice = solData.prevPrice;
+      sol.price = solData.price;
+      sol.note = '暗号資産（リアルタイム）';
+    }
+    if (forexRate) {
+      const usd = ASSETS.find(a => a.id === 'usdjpy');
+      usd.prevPrice = usd.price;
+      usd.price = forexRate;
+      usd.note = 'リアルタイム為替レート（更新済）';
+    }
+  } catch (e) {
+    console.warn('Refresh error:', e);
+  }
+
+  renderPrices();
+  updateTimestamp();
+
+  btn.classList.remove('loading');
+}
+
+renderPrices();
+renderNews();
+renderTrends();
+updateTimestamp();
+</script>
+</body>
+</html>
