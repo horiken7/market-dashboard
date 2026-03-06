@@ -326,47 +326,9 @@ const ASSETS = [
   }
 ];
 
-let NEWS_ITEMS = [
-  {
-    title: '米国・イスラエルのイラン攻撃でホルムズ海峡が事実上閉鎖',
-    body: '米国とイスラエルによるイラン攻撃を受け、保険会社や大手石油企業がホルムズ海峡からの撤退を開始。世界の石油供給の約20%が影響を受け、原油価格は年初来36%上昇。インフレ再加速への懸念が強まっています。',
-    url: 'https://translate.google.com/translate?sl=en&tl=ja&u=https%3A%2F%2Fwww.aljazeera.com%2Feconomy%2F2026%2F3%2F3%2Fshutdown-of-hormuz-strait-raises-fears-of-soaring-oil-prices',
-    source: 'Al Jazeera（日本語翻訳）'
-  },
-  {
-    title: 'トランプ関税: 通商法122条に基づく新たな一律10%関税を発動',
-    body: '最高裁がIEEPA関税を違憲と判断した後、トランプ政権は通商法122条に基づき全世界対象の一律10%関税を発動。15%への引き上げも示唆しており、日本の対米関税率は13.5〜15.4%に上昇する見通し。',
-    url: 'https://www.newsweekjapan.jp/stories/world/2026/03/589078.php',
-    source: 'Newsweek Japan'
-  },
-  {
-    title: 'ビットコイン急反発 — 地政学リスクの中でデジタルゴールドとして注目',
-    body: 'BTCが24時間で+5.3%上昇。中東紛争による金価格高騰と連動し、ビットコインの「デジタルゴールド」としてのヘッジ需要が再評価されています。機関投資家の資金流入も増加傾向。',
-    url: 'https://translate.google.com/translate?sl=en&tl=ja&u=https%3A%2F%2Fwww.cnbc.com%2F2026%2F03%2F04%2Firan-israel-us-war-middle-east-conflict-oil-gas-lng-surge-central-banks-inflation-risk.html',
-    source: 'CNBC（日本語翻訳）'
-  }
-];
+let NEWS_ITEMS = [];
 
-let TREND_ITEMS = [
-  {
-    title: '🏟️ #WBC2026 — ワールド・ベースボール・クラシック開幕',
-    body: '3月5日にWBC2026が開幕。侍ジャパンの東京ドームでの初戦に注目が集まり、大谷翔平選手の出場についての話題で盛り上がっています。Netflixでの独占配信も話題に。',
-    url: 'https://x.com/search?q=%23WBC2026&src=trend_click',
-    source: 'X トレンド'
-  },
-  {
-    title: '⛽ #原油高 #ガソリン価格 — エネルギー価格上昇への懸念',
-    body: 'ホルムズ海峡危機を受け、日本国内でもガソリン価格上昇への不安が広がっています。「補助金延長」「電気代やばい」などの声がトレンド入り。',
-    url: 'https://x.com/search?q=%23%E5%8E%9F%E6%B2%B9%E9%AB%98&src=trend_click',
-    source: 'X トレンド'
-  },
-  {
-    title: '📱 #トランプ関税 — 日本経済への影響議論',
-    body: '新関税が日本の輸出企業に与える影響について議論が白熱。自動車・半導体関連企業への影響を懸念する声が多数。円安・株安のダブルパンチへの不安も。',
-    url: 'https://x.com/search?q=%23%E3%83%88%E3%83%A9%E3%83%B3%E3%83%97%E9%96%A2%E7%A8%8E&src=trend_click',
-    source: 'X トレンド'
-  }
-];
+let TREND_ITEMS = [];
 
 function formatNumber(num, decimals) {
   return num.toLocaleString('ja-JP', {
@@ -402,6 +364,10 @@ function renderPrices() {
 function renderNews() {
   const grid = document.getElementById('newsGrid');
   grid.innerHTML = '';
+  if (NEWS_ITEMS.length === 0) {
+    grid.innerHTML = '<div style="color:var(--muted);padding:20px;grid-column:1/-1;">ニュースを取得できませんでした。しばらく後に更新ボタンをお試しください。</div>';
+    return;
+  }
   NEWS_ITEMS.forEach(item => {
     const card = document.createElement('div');
     card.className = 'news-card';
@@ -420,6 +386,10 @@ function renderNews() {
 function renderTrends() {
   const grid = document.getElementById('trendGrid');
   grid.innerHTML = '';
+  if (TREND_ITEMS.length === 0) {
+    grid.innerHTML = '<div style="color:var(--muted);padding:20px;grid-column:1/-1;">トレンドを取得できませんでした。しばらく後に更新ボタンをお試しください。</div>';
+    return;
+  }
   TREND_ITEMS.forEach(item => {
     const card = document.createElement('div');
     card.className = 'news-card';
@@ -482,30 +452,95 @@ function stripHtml(str) {
   return decodeHtmlEntities(str.replace(/<[^>]*>/g, '').trim());
 }
 
+async function fetchFundNAV(fundCode) {
+  try {
+    const url = `https://finance.yahoo.co.jp/fund/detail/${fundCode}`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('Proxy error');
+    const html = await res.text();
+
+    // Try Next.js embedded JSON first (__NEXT_DATA__)
+    const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+    if (nextDataMatch) {
+      const d = JSON.parse(nextDataMatch[1]);
+      const pp = d?.props?.pageProps;
+      const nav = pp?.latestPrice?.value ?? pp?.price?.close ?? pp?.fundDetail?.latestNav ?? pp?.initialState?.fund?.nav;
+      const prev = pp?.latestPrice?.previousValue ?? pp?.fundDetail?.previousNav;
+      if (nav && Number(nav) > 0) return { price: Number(nav), prevPrice: prev ? Number(prev) : null };
+    }
+
+    // Fallback: regex for 基準価額 followed by price
+    const m = html.match(/基準価額[\s\S]{0,300}?([1-9][0-9,]{3,})\s*円/);
+    if (m) return { price: parseInt(m[1].replace(/,/g, '')), prevPrice: null };
+
+    return null;
+  } catch (e) {
+    console.warn(`fetchFundNAV(${fundCode}) failed:`, e);
+    return null;
+  }
+}
+
+async function fetchYahooFinance(symbol) {
+  try {
+    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const meta = data?.chart?.result?.[0]?.meta;
+    if (!meta) throw new Error('No data');
+    const price = meta.regularMarketPrice;
+    const prevPrice = meta.previousClose ?? meta.chartPreviousClose ?? price;
+    return { price, prevPrice };
+  } catch (e) {
+    console.warn(`Yahoo Finance fetch failed (${symbol}):`, e);
+    return null;
+  }
+}
+
 async function fetchLatestNews() {
   const rssSources = [
-    'https://feeds.reuters.com/reuters/businessNews',
-    'https://www.cnbc.com/id/100003114/device/rss/rss.html'
+    { url: 'https://www.nhk.or.jp/rss/news/cat5.xml', label: 'NHK経済' },
+    { url: 'https://news.yahoo.co.jp/rss/topics/business.xml', label: 'Yahoo!ニュース ビジネス' },
+    { url: 'https://feeds.reuters.com/reuters/businessNews', label: 'Reuters' },
+    { url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', label: 'CNBC' }
   ];
-  for (const rssUrl of rssSources) {
-    try {
-      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=3`;
+
+  const results = await Promise.allSettled(
+    rssSources.map(async ({ url, label }) => {
+      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=10`;
       const res = await fetch(apiUrl);
-      if (!res.ok) continue;
+      if (!res.ok) throw new Error('API error');
       const data = await res.json();
-      if (data.status === 'ok' && data.items && data.items.length > 0) {
-        return data.items.slice(0, 3).map(item => ({
-          title: stripHtml(item.title || ''),
-          body: stripHtml(item.description || item.content || '').slice(0, 220) + '…',
-          url: item.link,
-          source: data.feed.title || 'Reuters'
-        }));
-      }
-    } catch (e) {
-      console.warn(`Failed to fetch news from ${rssUrl}:`, e);
-    }
-  }
-  return null;
+      if (data.status !== 'ok' || !data.items || data.items.length === 0) throw new Error('No items');
+      return data.items.map(item => ({
+        title: stripHtml(item.title || ''),
+        body: stripHtml(item.description || item.content || '').slice(0, 220) + '…',
+        url: item.link,
+        source: label,
+        pubDate: item.pubDate ? new Date(item.pubDate) : new Date(0)
+      }));
+    })
+  );
+
+  const allItems = results
+    .filter(r => r.status === 'fulfilled')
+    .flatMap(r => r.value)
+    .filter(item => isInvestmentRelated(item.title, item.body));
+
+  if (allItems.length === 0) return null;
+
+  // Sort by date (newest first) and deduplicate by title similarity
+  allItems.sort((a, b) => b.pubDate - a.pubDate);
+  const seen = new Set();
+  const deduped = allItems.filter(item => {
+    const key = item.title.slice(0, 30);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return deduped.slice(0, 5);
 }
 
 const INVESTMENT_KEYWORDS = [
@@ -525,6 +560,16 @@ function isInvestmentRelated(keyword, description) {
   return INVESTMENT_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
 }
 
+// Trends用の厳しい判定: タイトル自体にキーワードがあるか、説明文に2つ以上のキーワードがある場合のみ通過
+function isStronglyInvestmentRelated(title, description) {
+  const titleText = title.toLowerCase();
+  const descText = description.toLowerCase();
+  const titleMatches = INVESTMENT_KEYWORDS.some(kw => titleText.includes(kw.toLowerCase()));
+  if (titleMatches) return true;
+  const descMatchCount = INVESTMENT_KEYWORDS.filter(kw => descText.includes(kw.toLowerCase())).length;
+  return descMatchCount >= 2;
+}
+
 async function fetchLatestTrends() {
   try {
     const rssUrl = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=JP';
@@ -537,7 +582,7 @@ async function fetchLatestTrends() {
         .filter(item => {
           const keyword = stripHtml(item.title || '');
           const desc = stripHtml(item.description || '');
-          return isInvestmentRelated(keyword, desc);
+          return isStronglyInvestmentRelated(keyword, desc);
         })
         .slice(0, 3);
       if (filtered.length === 0) return null;
@@ -562,10 +607,20 @@ async function refreshAll() {
   btn.classList.add('loading');
 
   try {
-    const [btcData, solData, forexRate, newsData, trendsData] = await Promise.all([
+    const [
+      btcData, solData, forexRate, nasdaqData, goldData,
+      fundWorldData, fundSP500Data, fundTracersSP500Data, fundTracersNasdaqData,
+      newsData, trendsData
+    ] = await Promise.all([
       fetchCryptoPrice('BTCUSDT'),
       fetchCryptoPrice('SOLUSDT'),
       fetchForexRate(),
+      fetchYahooFinance('^NDX'),
+      fetchYahooFinance('GC=F'),
+      fetchFundNAV('0331418A'),  // eMAXIS Slim 全世界株式(除く日本)
+      fetchFundNAV('0331319B'),  // eMAXIS Slim S&P500
+      fetchFundNAV('9I311179'),  // Tracers S&P500ゴールドプラス
+      fetchFundNAV('9I311188'),  // Tracers NASDAQ100ゴールドプラス
       fetchLatestNews(),
       fetchLatestTrends()
     ]);
@@ -588,12 +643,32 @@ async function refreshAll() {
       usd.price = forexRate;
       usd.note = 'リアルタイム為替レート（更新済）';
     }
-    if (newsData) {
-      NEWS_ITEMS = newsData;
+    if (nasdaqData) {
+      const ndx = ASSETS.find(a => a.id === 'nasdaq100');
+      ndx.price = nasdaqData.price;
+      ndx.prevPrice = nasdaqData.prevPrice;
+      ndx.note = 'NASDAQ 100（Yahoo Finance リアルタイム）';
     }
-    if (trendsData) {
-      TREND_ITEMS = trendsData;
+    if (goldData) {
+      const gold = ASSETS.find(a => a.id === 'gold');
+      gold.price = goldData.price;
+      gold.prevPrice = goldData.prevPrice;
+      gold.note = 'スポット価格（Yahoo Finance リアルタイム）';
     }
+    [
+      { data: fundWorldData,        id: 'emaxis_world' },
+      { data: fundSP500Data,        id: 'emaxis_sp500' },
+      { data: fundTracersSP500Data, id: 'tracers_sp500gold' },
+      { data: fundTracersNasdaqData,id: 'tracers_nasdaqgold' },
+    ].forEach(({ data, id }) => {
+      if (!data) return;
+      const asset = ASSETS.find(a => a.id === id);
+      asset.price = data.price;
+      if (data.prevPrice !== null) asset.prevPrice = data.prevPrice;
+      asset.note = '基準価額（Yahoo!ファイナンス）';
+    });
+    NEWS_ITEMS = newsData || [];
+    TREND_ITEMS = trendsData || [];
   } catch (e) {
     console.warn('Refresh error:', e);
   }
@@ -606,10 +681,20 @@ async function refreshAll() {
   btn.classList.remove('loading');
 }
 
-renderPrices();
-renderNews();
-renderTrends();
-updateTimestamp();
+function showLoading(gridId, label) {
+  document.getElementById(gridId).innerHTML =
+    `<div style="color:var(--muted);padding:20px;grid-column:1/-1;">📡 ${label}を取得中...</div>`;
+}
+
+async function init() {
+  renderPrices();
+  showLoading('newsGrid', '最新ニュース');
+  showLoading('trendGrid', 'トレンド');
+  updateTimestamp();
+  await refreshAll();
+}
+
+init();
 </script>
 </body>
 </html>
