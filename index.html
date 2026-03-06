@@ -326,47 +326,9 @@ const ASSETS = [
   }
 ];
 
-let NEWS_ITEMS = [
-  {
-    title: '米国・イスラエルのイラン攻撃でホルムズ海峡が事実上閉鎖',
-    body: '米国とイスラエルによるイラン攻撃を受け、保険会社や大手石油企業がホルムズ海峡からの撤退を開始。世界の石油供給の約20%が影響を受け、原油価格は年初来36%上昇。インフレ再加速への懸念が強まっています。',
-    url: 'https://translate.google.com/translate?sl=en&tl=ja&u=https%3A%2F%2Fwww.aljazeera.com%2Feconomy%2F2026%2F3%2F3%2Fshutdown-of-hormuz-strait-raises-fears-of-soaring-oil-prices',
-    source: 'Al Jazeera（日本語翻訳）'
-  },
-  {
-    title: 'トランプ関税: 通商法122条に基づく新たな一律10%関税を発動',
-    body: '最高裁がIEEPA関税を違憲と判断した後、トランプ政権は通商法122条に基づき全世界対象の一律10%関税を発動。15%への引き上げも示唆しており、日本の対米関税率は13.5〜15.4%に上昇する見通し。',
-    url: 'https://www.newsweekjapan.jp/stories/world/2026/03/589078.php',
-    source: 'Newsweek Japan'
-  },
-  {
-    title: 'ビットコイン急反発 — 地政学リスクの中でデジタルゴールドとして注目',
-    body: 'BTCが24時間で+5.3%上昇。中東紛争による金価格高騰と連動し、ビットコインの「デジタルゴールド」としてのヘッジ需要が再評価されています。機関投資家の資金流入も増加傾向。',
-    url: 'https://translate.google.com/translate?sl=en&tl=ja&u=https%3A%2F%2Fwww.cnbc.com%2F2026%2F03%2F04%2Firan-israel-us-war-middle-east-conflict-oil-gas-lng-surge-central-banks-inflation-risk.html',
-    source: 'CNBC（日本語翻訳）'
-  }
-];
+let NEWS_ITEMS = [];
 
-let TREND_ITEMS = [
-  {
-    title: '🏟️ #WBC2026 — ワールド・ベースボール・クラシック開幕',
-    body: '3月5日にWBC2026が開幕。侍ジャパンの東京ドームでの初戦に注目が集まり、大谷翔平選手の出場についての話題で盛り上がっています。Netflixでの独占配信も話題に。',
-    url: 'https://x.com/search?q=%23WBC2026&src=trend_click',
-    source: 'X トレンド'
-  },
-  {
-    title: '⛽ #原油高 #ガソリン価格 — エネルギー価格上昇への懸念',
-    body: 'ホルムズ海峡危機を受け、日本国内でもガソリン価格上昇への不安が広がっています。「補助金延長」「電気代やばい」などの声がトレンド入り。',
-    url: 'https://x.com/search?q=%23%E5%8E%9F%E6%B2%B9%E9%AB%98&src=trend_click',
-    source: 'X トレンド'
-  },
-  {
-    title: '📱 #トランプ関税 — 日本経済への影響議論',
-    body: '新関税が日本の輸出企業に与える影響について議論が白熱。自動車・半導体関連企業への影響を懸念する声が多数。円安・株安のダブルパンチへの不安も。',
-    url: 'https://x.com/search?q=%23%E3%83%88%E3%83%A9%E3%83%B3%E3%83%97%E9%96%A2%E7%A8%8E&src=trend_click',
-    source: 'X トレンド'
-  }
-];
+let TREND_ITEMS = [];
 
 function formatNumber(num, decimals) {
   return num.toLocaleString('ja-JP', {
@@ -402,6 +364,10 @@ function renderPrices() {
 function renderNews() {
   const grid = document.getElementById('newsGrid');
   grid.innerHTML = '';
+  if (NEWS_ITEMS.length === 0) {
+    grid.innerHTML = '<div style="color:var(--muted);padding:20px;grid-column:1/-1;">ニュースを取得できませんでした。しばらく後に更新ボタンをお試しください。</div>';
+    return;
+  }
   NEWS_ITEMS.forEach(item => {
     const card = document.createElement('div');
     card.className = 'news-card';
@@ -420,6 +386,10 @@ function renderNews() {
 function renderTrends() {
   const grid = document.getElementById('trendGrid');
   grid.innerHTML = '';
+  if (TREND_ITEMS.length === 0) {
+    grid.innerHTML = '<div style="color:var(--muted);padding:20px;grid-column:1/-1;">トレンドを取得できませんでした。しばらく後に更新ボタンをお試しください。</div>';
+    return;
+  }
   TREND_ITEMS.forEach(item => {
     const card = document.createElement('div');
     card.className = 'news-card';
@@ -484,28 +454,47 @@ function stripHtml(str) {
 
 async function fetchLatestNews() {
   const rssSources = [
-    'https://feeds.reuters.com/reuters/businessNews',
-    'https://www.cnbc.com/id/100003114/device/rss/rss.html'
+    { url: 'https://www.nhk.or.jp/rss/news/cat5.xml', label: 'NHK経済' },
+    { url: 'https://news.yahoo.co.jp/rss/topics/business.xml', label: 'Yahoo!ニュース ビジネス' },
+    { url: 'https://feeds.reuters.com/reuters/businessNews', label: 'Reuters' },
+    { url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', label: 'CNBC' }
   ];
-  for (const rssUrl of rssSources) {
-    try {
-      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=3`;
+
+  const results = await Promise.allSettled(
+    rssSources.map(async ({ url, label }) => {
+      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=10`;
       const res = await fetch(apiUrl);
-      if (!res.ok) continue;
+      if (!res.ok) throw new Error('API error');
       const data = await res.json();
-      if (data.status === 'ok' && data.items && data.items.length > 0) {
-        return data.items.slice(0, 3).map(item => ({
-          title: stripHtml(item.title || ''),
-          body: stripHtml(item.description || item.content || '').slice(0, 220) + '…',
-          url: item.link,
-          source: data.feed.title || 'Reuters'
-        }));
-      }
-    } catch (e) {
-      console.warn(`Failed to fetch news from ${rssUrl}:`, e);
-    }
-  }
-  return null;
+      if (data.status !== 'ok' || !data.items || data.items.length === 0) throw new Error('No items');
+      return data.items.map(item => ({
+        title: stripHtml(item.title || ''),
+        body: stripHtml(item.description || item.content || '').slice(0, 220) + '…',
+        url: item.link,
+        source: label,
+        pubDate: item.pubDate ? new Date(item.pubDate) : new Date(0)
+      }));
+    })
+  );
+
+  const allItems = results
+    .filter(r => r.status === 'fulfilled')
+    .flatMap(r => r.value)
+    .filter(item => isInvestmentRelated(item.title, item.body));
+
+  if (allItems.length === 0) return null;
+
+  // Sort by date (newest first) and deduplicate by title similarity
+  allItems.sort((a, b) => b.pubDate - a.pubDate);
+  const seen = new Set();
+  const deduped = allItems.filter(item => {
+    const key = item.title.slice(0, 30);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return deduped.slice(0, 5);
 }
 
 const INVESTMENT_KEYWORDS = [
@@ -588,12 +577,8 @@ async function refreshAll() {
       usd.price = forexRate;
       usd.note = 'リアルタイム為替レート（更新済）';
     }
-    if (newsData) {
-      NEWS_ITEMS = newsData;
-    }
-    if (trendsData) {
-      TREND_ITEMS = trendsData;
-    }
+    NEWS_ITEMS = newsData || [];
+    TREND_ITEMS = trendsData || [];
   } catch (e) {
     console.warn('Refresh error:', e);
   }
@@ -606,10 +591,20 @@ async function refreshAll() {
   btn.classList.remove('loading');
 }
 
-renderPrices();
-renderNews();
-renderTrends();
-updateTimestamp();
+function showLoading(gridId, label) {
+  document.getElementById(gridId).innerHTML =
+    `<div style="color:var(--muted);padding:20px;grid-column:1/-1;">📡 ${label}を取得中...</div>`;
+}
+
+async function init() {
+  renderPrices();
+  showLoading('newsGrid', '最新ニュース');
+  showLoading('trendGrid', 'トレンド');
+  updateTimestamp();
+  await refreshAll();
+}
+
+init();
 </script>
 </body>
 </html>
