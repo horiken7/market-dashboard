@@ -326,7 +326,7 @@ const ASSETS = [
   }
 ];
 
-const NEWS_ITEMS = [
+let NEWS_ITEMS = [
   {
     title: '米国・イスラエルのイラン攻撃でホルムズ海峡が事実上閉鎖',
     body: '米国とイスラエルによるイラン攻撃を受け、保険会社や大手石油企業がホルムズ海峡からの撤退を開始。世界の石油供給の約20%が影響を受け、原油価格は年初来36%上昇。インフレ再加速への懸念が強まっています。',
@@ -347,7 +347,7 @@ const NEWS_ITEMS = [
   }
 ];
 
-const TREND_ITEMS = [
+let TREND_ITEMS = [
   {
     title: '🏟️ #WBC2026 — ワールド・ベースボール・クラシック開幕',
     body: '3月5日にWBC2026が開幕。侍ジャパンの東京ドームでの初戦に注目が集まり、大谷翔平選手の出場についての話題で盛り上がっています。Netflixでの独占配信も話題に。',
@@ -468,15 +468,106 @@ async function fetchForexRate() {
   }
 }
 
+function decodeHtmlEntities(str) {
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ');
+}
+
+function stripHtml(str) {
+  return decodeHtmlEntities(str.replace(/<[^>]*>/g, '').trim());
+}
+
+async function fetchLatestNews() {
+  const rssSources = [
+    'https://feeds.reuters.com/reuters/businessNews',
+    'https://www.cnbc.com/id/100003114/device/rss/rss.html'
+  ];
+  for (const rssUrl of rssSources) {
+    try {
+      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=3`;
+      const res = await fetch(apiUrl);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data.status === 'ok' && data.items && data.items.length > 0) {
+        return data.items.slice(0, 3).map(item => ({
+          title: stripHtml(item.title || ''),
+          body: stripHtml(item.description || item.content || '').slice(0, 220) + '…',
+          url: item.link,
+          source: data.feed.title || 'Reuters'
+        }));
+      }
+    } catch (e) {
+      console.warn(`Failed to fetch news from ${rssUrl}:`, e);
+    }
+  }
+  return null;
+}
+
+const INVESTMENT_KEYWORDS = [
+  '株', '株価', '日経', 'ナスダック', 'S&P', 'NYSE', 'ETF', '投資', '投資信託', 'ファンド',
+  '為替', '円安', '円高', 'ドル', 'ユーロ', '金利', '利上げ', '利下げ', 'FRB', '日銀',
+  '金価格', '原油', '資源', 'インフレ', 'デフレ', 'GDP', '景気', '経済',
+  '関税', '貿易', '輸出', '輸入', '半導体', 'AI株',
+  'ビットコイン', 'Bitcoin', 'BTC', '仮想通貨', '暗号資産', '仮想', 'イーサリアム', 'ETH',
+  '金融', '証券', '債券', '国債', '財政', 'NISA', 'iDeCo',
+  'リセッション', '恐慌', 'バブル', '上場', 'IPO', 'M&A',
+  'トランプ', '関税', '制裁', '地政学',
+  'stock', 'market', 'crypto', 'bitcoin', 'inflation', 'fed', 'rate', 'gdp'
+];
+
+function isInvestmentRelated(keyword, description) {
+  const text = (keyword + ' ' + description).toLowerCase();
+  return INVESTMENT_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
+}
+
+async function fetchLatestTrends() {
+  try {
+    const rssUrl = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=JP';
+    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=20`;
+    const res = await fetch(apiUrl);
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    if (data.status === 'ok' && data.items && data.items.length > 0) {
+      const filtered = data.items
+        .filter(item => {
+          const keyword = stripHtml(item.title || '');
+          const desc = stripHtml(item.description || '');
+          return isInvestmentRelated(keyword, desc);
+        })
+        .slice(0, 3);
+      if (filtered.length === 0) return null;
+      return filtered.map(item => {
+        const keyword = stripHtml(item.title || '');
+        return {
+          title: '🔥 ' + keyword,
+          body: stripHtml(item.description || '').slice(0, 220) + '…',
+          url: `https://x.com/search?q=${encodeURIComponent(keyword)}&src=trend_click`,
+          source: 'Google Trends Japan'
+        };
+      });
+    }
+  } catch (e) {
+    console.warn('Failed to fetch trends:', e);
+  }
+  return null;
+}
+
 async function refreshAll() {
   const btn = document.getElementById('refreshBtn');
   btn.classList.add('loading');
 
   try {
-    const [btcData, solData, forexRate] = await Promise.all([
+    const [btcData, solData, forexRate, newsData, trendsData] = await Promise.all([
       fetchCryptoPrice('BTCUSDT'),
       fetchCryptoPrice('SOLUSDT'),
-      fetchForexRate()
+      fetchForexRate(),
+      fetchLatestNews(),
+      fetchLatestTrends()
     ]);
 
     if (btcData) {
@@ -497,11 +588,19 @@ async function refreshAll() {
       usd.price = forexRate;
       usd.note = 'リアルタイム為替レート（更新済）';
     }
+    if (newsData) {
+      NEWS_ITEMS = newsData;
+    }
+    if (trendsData) {
+      TREND_ITEMS = trendsData;
+    }
   } catch (e) {
     console.warn('Refresh error:', e);
   }
 
   renderPrices();
+  renderNews();
+  renderTrends();
   updateTimestamp();
 
   btn.classList.remove('loading');
