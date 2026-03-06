@@ -452,6 +452,23 @@ function stripHtml(str) {
   return decodeHtmlEntities(str.replace(/<[^>]*>/g, '').trim());
 }
 
+async function fetchYahooFinance(symbol) {
+  try {
+    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const meta = data?.chart?.result?.[0]?.meta;
+    if (!meta) throw new Error('No data');
+    const price = meta.regularMarketPrice;
+    const prevPrice = meta.previousClose ?? meta.chartPreviousClose ?? price;
+    return { price, prevPrice };
+  } catch (e) {
+    console.warn(`Yahoo Finance fetch failed (${symbol}):`, e);
+    return null;
+  }
+}
+
 async function fetchLatestNews() {
   const rssSources = [
     { url: 'https://www.nhk.or.jp/rss/news/cat5.xml', label: 'NHK経済' },
@@ -551,10 +568,12 @@ async function refreshAll() {
   btn.classList.add('loading');
 
   try {
-    const [btcData, solData, forexRate, newsData, trendsData] = await Promise.all([
+    const [btcData, solData, forexRate, nasdaqData, goldData, newsData, trendsData] = await Promise.all([
       fetchCryptoPrice('BTCUSDT'),
       fetchCryptoPrice('SOLUSDT'),
       fetchForexRate(),
+      fetchYahooFinance('^NDX'),
+      fetchYahooFinance('GC=F'),
       fetchLatestNews(),
       fetchLatestTrends()
     ]);
@@ -576,6 +595,18 @@ async function refreshAll() {
       usd.prevPrice = usd.price;
       usd.price = forexRate;
       usd.note = 'リアルタイム為替レート（更新済）';
+    }
+    if (nasdaqData) {
+      const ndx = ASSETS.find(a => a.id === 'nasdaq100');
+      ndx.price = nasdaqData.price;
+      ndx.prevPrice = nasdaqData.prevPrice;
+      ndx.note = 'NASDAQ 100（Yahoo Finance リアルタイム）';
+    }
+    if (goldData) {
+      const gold = ASSETS.find(a => a.id === 'gold');
+      gold.price = goldData.price;
+      gold.prevPrice = goldData.prevPrice;
+      gold.note = 'スポット価格（Yahoo Finance リアルタイム）';
     }
     NEWS_ITEMS = newsData || [];
     TREND_ITEMS = trendsData || [];
