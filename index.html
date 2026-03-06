@@ -560,6 +560,16 @@ function isInvestmentRelated(keyword, description) {
   return INVESTMENT_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
 }
 
+// Trends用の厳しい判定: タイトル自体にキーワードがあるか、説明文に2つ以上のキーワードがある場合のみ通過
+function isStronglyInvestmentRelated(title, description) {
+  const titleText = title.toLowerCase();
+  const descText = description.toLowerCase();
+  const titleMatches = INVESTMENT_KEYWORDS.some(kw => titleText.includes(kw.toLowerCase()));
+  if (titleMatches) return true;
+  const descMatchCount = INVESTMENT_KEYWORDS.filter(kw => descText.includes(kw.toLowerCase())).length;
+  return descMatchCount >= 2;
+}
+
 async function fetchLatestTrends() {
   try {
     const rssUrl = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=JP';
@@ -572,7 +582,7 @@ async function fetchLatestTrends() {
         .filter(item => {
           const keyword = stripHtml(item.title || '');
           const desc = stripHtml(item.description || '');
-          return isInvestmentRelated(keyword, desc);
+          return isStronglyInvestmentRelated(keyword, desc);
         })
         .slice(0, 3);
       if (filtered.length === 0) return null;
