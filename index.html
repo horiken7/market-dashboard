@@ -498,6 +498,27 @@ async function fetchYahooFinance(symbol) {
   }
 }
 
+function isEnglishText(text) {
+  const letters = text.replace(/\s/g, '');
+  if (letters.length === 0) return false;
+  const asciiLetters = letters.split('').filter(c => c.charCodeAt(0) < 256).length;
+  return asciiLetters / letters.length > 0.85;
+}
+
+async function translateToJapanese(text) {
+  try {
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ja`);
+    if (!res.ok) return text;
+    const data = await res.json();
+    if (data.responseStatus === 200 && data.responseData && data.responseData.translatedText) {
+      return data.responseData.translatedText;
+    }
+    return text;
+  } catch {
+    return text;
+  }
+}
+
 async function fetchLatestNews() {
   const rssSources = [
     { url: 'https://www.nhk.or.jp/rss/news/cat5.xml', label: 'NHK経済' },
@@ -540,7 +561,16 @@ async function fetchLatestNews() {
     return true;
   });
 
-  return deduped.slice(0, 5);
+  const finalItems = deduped.slice(0, 5);
+
+  // 英語タイトルを日本語に翻訳
+  await Promise.allSettled(finalItems.map(async item => {
+    if (isEnglishText(item.title)) {
+      item.title = await translateToJapanese(item.title);
+    }
+  }));
+
+  return finalItems;
 }
 
 const INVESTMENT_KEYWORDS = [
