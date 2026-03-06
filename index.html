@@ -508,15 +508,40 @@ async function fetchLatestNews() {
   return null;
 }
 
+const INVESTMENT_KEYWORDS = [
+  '株', '株価', '日経', 'ナスダック', 'S&P', 'NYSE', 'ETF', '投資', '投資信託', 'ファンド',
+  '為替', '円安', '円高', 'ドル', 'ユーロ', '金利', '利上げ', '利下げ', 'FRB', '日銀',
+  '金価格', '原油', '資源', 'インフレ', 'デフレ', 'GDP', '景気', '経済',
+  '関税', '貿易', '輸出', '輸入', '半導体', 'AI株',
+  'ビットコイン', 'Bitcoin', 'BTC', '仮想通貨', '暗号資産', '仮想', 'イーサリアム', 'ETH',
+  '金融', '証券', '債券', '国債', '財政', 'NISA', 'iDeCo',
+  'リセッション', '恐慌', 'バブル', '上場', 'IPO', 'M&A',
+  'トランプ', '関税', '制裁', '地政学',
+  'stock', 'market', 'crypto', 'bitcoin', 'inflation', 'fed', 'rate', 'gdp'
+];
+
+function isInvestmentRelated(keyword, description) {
+  const text = (keyword + ' ' + description).toLowerCase();
+  return INVESTMENT_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
+}
+
 async function fetchLatestTrends() {
   try {
     const rssUrl = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=JP';
-    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=3`;
+    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=20`;
     const res = await fetch(apiUrl);
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
     if (data.status === 'ok' && data.items && data.items.length > 0) {
-      return data.items.slice(0, 3).map(item => {
+      const filtered = data.items
+        .filter(item => {
+          const keyword = stripHtml(item.title || '');
+          const desc = stripHtml(item.description || '');
+          return isInvestmentRelated(keyword, desc);
+        })
+        .slice(0, 3);
+      if (filtered.length === 0) return null;
+      return filtered.map(item => {
         const keyword = stripHtml(item.title || '');
         return {
           title: '🔥 ' + keyword,
