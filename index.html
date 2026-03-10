@@ -608,15 +608,14 @@ async function fetchLatestTrends() {
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
     if (data.status === 'ok' && data.items && data.items.length > 0) {
-      const filtered = data.items
-        .filter(item => {
-          const keyword = stripHtml(item.title || '');
-          const desc = stripHtml(item.description || '');
-          return isStronglyInvestmentRelated(keyword, desc);
-        })
-        .slice(0, 3);
-      if (filtered.length === 0) return null;
-      return filtered.map(item => {
+      const investmentFiltered = data.items.filter(item => {
+        const keyword = stripHtml(item.title || '');
+        const desc = stripHtml(item.description || '');
+        return isStronglyInvestmentRelated(keyword, desc);
+      });
+      // 投資関連が見つかればそれを優先、なければ上位トレンドをそのまま表示
+      const candidates = (investmentFiltered.length > 0 ? investmentFiltered : data.items).slice(0, 5);
+      return candidates.map(item => {
         const keyword = stripHtml(item.title || '');
         return {
           title: '🔥 ' + keyword,
