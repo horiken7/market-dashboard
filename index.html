@@ -601,32 +601,63 @@ function isStronglyInvestmentRelated(title, description) {
 }
 
 async function fetchLatestTrends() {
-  try {
-    const rssUrl = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=JP';
-    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=20`;
-    const res = await fetch(apiUrl);
-    if (!res.ok) throw new Error('API error');
-    const data = await res.json();
-    if (data.status === 'ok' && data.items && data.items.length > 0) {
-      const investmentFiltered = data.items.filter(item => {
-        const keyword = stripHtml(item.title || '');
-        const desc = stripHtml(item.description || '');
-        return isStronglyInvestmentRelated(keyword, desc);
-      });
-      // 投資関連が見つかればそれを優先、なければ上位トレンドをそのまま表示
-      const candidates = (investmentFiltered.length > 0 ? investmentFiltered : data.items).slice(0, 5);
-      return candidates.map(item => {
-        const keyword = stripHtml(item.title || '');
-        return {
-          title: '🔥 ' + keyword,
-          body: (() => { const t = stripHtml(item.description || ''); return t.length > 220 ? t.slice(0, 220) + '…' : t; })(),
-          url: `https://x.com/search?q=${encodeURIComponent(keyword)}&src=trend_click`,
-          source: 'Google Trends Japan'
-        };
-      });
+  // 複数のRSSプロキシとURLを試みる
+  const rssUrls = [
+    'https://trends.google.com/trending/rss?geo=JP',
+    'https://trends.google.com/trends/trendingsearches/daily/rss?geo=JP'
+  ];
+  const proxyTemplates = [
+    (url) => `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=20`,
+    (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
+  ];
+
+  for (const rssUrl of rssUrls) {
+    for (const proxyFn of proxyTemplates) {
+      try {
+        const apiUrl = proxyFn(rssUrl);
+        const res = await fetch(apiUrl);
+        if (!res.ok) continue;
+        const raw = await res.json();
+
+        // rss2json形式とallorigins形式を両方対応
+        let items = null;
+        if (raw.status === 'ok' && raw.items && raw.items.length > 0) {
+          items = raw.items;
+        } else if (raw.contents) {
+          // allorigins: XMLをパース
+          const parser = new DOMParser();
+          const xml = parser.parseFromString(raw.contents, 'text/xml');
+          const entries = Array.from(xml.querySelectorAll('item'));
+          if (entries.length > 0) {
+            items = entries.map(el => ({
+              title: el.querySelector('title')?.textContent || '',
+              description: el.querySelector('description')?.textContent || ''
+            }));
+          }
+        }
+
+        if (!items || items.length === 0) continue;
+
+        const investmentFiltered = items.filter(item => {
+          const keyword = stripHtml(item.title || '');
+          const desc = stripHtml(item.description || '');
+          return isStronglyInvestmentRelated(keyword, desc);
+        });
+        // 投資関連が見つかればそれを優先、なければ上位トレンドをそのまま表示
+        const candidates = (investmentFiltered.length > 0 ? investmentFiltered : items).slice(0, 5);
+        return candidates.map(item => {
+          const keyword = stripHtml(item.title || '');
+          return {
+            title: '🔥 ' + keyword,
+            body: (() => { const t = stripHtml(item.description || ''); return t.length > 220 ? t.slice(0, 220) + '…' : t; })(),
+            url: `https://x.com/search?q=${encodeURIComponent(keyword)}&src=trend_click`,
+            source: 'Google Trends Japan'
+          };
+        });
+      } catch (e) {
+        console.warn('Trend fetch attempt failed:', e);
+      }
     }
-  } catch (e) {
-    console.warn('Failed to fetch trends:', e);
   }
   return null;
 }
