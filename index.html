@@ -57,28 +57,45 @@
     font-size: 0.85rem;
   }
   .refresh-btn {
-    background: linear-gradient(135deg, #238636, #2ea043);
+    background: linear-gradient(135deg, var(--accent) 0%, #b388ff 60%, var(--gold) 100%);
     color: #fff;
     border: none;
-    padding: 10px 24px;
-    border-radius: 8px;
-    font-size: 0.95rem;
+    padding: 9px 22px;
+    border-radius: 50px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.25s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
+    box-shadow: 0 0 18px rgba(88,166,255,0.3), 0 2px 8px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
   }
-  .refresh-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
-  .refresh-btn:active { transform: translateY(0); }
-  .refresh-btn.loading { opacity: 0.7; pointer-events: none; }
+  .refresh-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, rgba(255,255,255,0.12) 0%, transparent 55%);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  .refresh-btn:hover {
+    box-shadow: 0 0 32px rgba(88,166,255,0.55), 0 4px 14px rgba(0,0,0,0.6);
+    transform: translateY(-2px);
+    filter: brightness(1.12);
+  }
+  .refresh-btn:active { transform: translateY(0); filter: brightness(1); }
+  .refresh-btn.loading { opacity: 0.75; pointer-events: none; }
   .refresh-btn .spinner {
     display: none;
-    width: 16px; height: 16px;
-    border: 2px solid rgba(255,255,255,0.3);
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.35);
     border-top-color: #fff;
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin 0.7s linear infinite;
   }
   .refresh-btn.loading .spinner { display: inline-block; }
   .refresh-btn.loading .btn-text { display: none; }
@@ -204,7 +221,7 @@
     <span class="update-time" id="updateTime">読み込み中...</span>
     <button class="refresh-btn" id="refreshBtn" onclick="refreshAll()">
       <span class="spinner"></span>
-      <span class="btn-text">🔄 更新</span>
+      <span class="btn-text"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>更新</span>
     </button>
   </div>
 </div>
@@ -667,7 +684,7 @@ async function fetchLatestTrends() {
       const keyword = stripHtml(item.title || '');
       return {
         title: '🔥 ' + keyword,
-        body: (() => { const t = stripHtml(item.description || ''); return t.length > 220 ? t.slice(0, 220) + '…' : t; })(),
+        body: (() => { const t = stripHtml(item.description || '').trim(); if (t.length < 5) return `「${keyword}」がGoogleトレンドで急上昇中です。`; return t.length > 220 ? t.slice(0, 220) + '…' : t; })(),
         url: `https://x.com/search?q=${encodeURIComponent(keyword)}&src=trend_click`,
         source: sourceLabel
       };
