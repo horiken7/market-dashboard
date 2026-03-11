@@ -606,33 +606,42 @@ async function fetchLatestTrends() {
     'https://trends.google.com/trending/rss?geo=JP',
     'https://trends.google.com/trends/trendingsearches/daily/rss?geo=JP'
   ];
-  const proxyTemplates = [
-    (url) => `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=20`,
-    (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
+  // type: 'json' = JSONレスポンス(rss2json/allorigins形式), 'raw' = 生XML
+  const proxyConfigs = [
+    { fn: (url) => `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=20`, type: 'rss2json' },
+    { fn: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, type: 'allorigins' },
+    { fn: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`, type: 'raw' },
+    { fn: (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, type: 'raw' },
   ];
 
+  function parseXmlItems(xmlText) {
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(xmlText, 'text/xml');
+    const entries = Array.from(xml.querySelectorAll('item'));
+    if (entries.length === 0) return null;
+    return entries.map(el => ({
+      title: el.querySelector('title')?.textContent || '',
+      description: el.querySelector('description')?.textContent || ''
+    }));
+  }
+
   for (const rssUrl of rssUrls) {
-    for (const proxyFn of proxyTemplates) {
+    for (const { fn, type } of proxyConfigs) {
       try {
-        const apiUrl = proxyFn(rssUrl);
+        const apiUrl = fn(rssUrl);
         const res = await fetch(apiUrl);
         if (!res.ok) continue;
-        const raw = await res.json();
 
-        // rss2json形式とallorigins形式を両方対応
         let items = null;
-        if (raw.status === 'ok' && raw.items && raw.items.length > 0) {
-          items = raw.items;
-        } else if (raw.contents) {
-          // allorigins: XMLをパース
-          const parser = new DOMParser();
-          const xml = parser.parseFromString(raw.contents, 'text/xml');
-          const entries = Array.from(xml.querySelectorAll('item'));
-          if (entries.length > 0) {
-            items = entries.map(el => ({
-              title: el.querySelector('title')?.textContent || '',
-              description: el.querySelector('description')?.textContent || ''
-            }));
+        if (type === 'raw') {
+          const text = await res.text();
+          items = parseXmlItems(text);
+        } else {
+          const raw = await res.json();
+          if (type === 'rss2json' && raw.status === 'ok' && raw.items && raw.items.length > 0) {
+            items = raw.items;
+          } else if (type === 'allorigins' && raw.contents) {
+            items = parseXmlItems(raw.contents);
           }
         }
 
