@@ -398,7 +398,7 @@ function renderTrends() {
       <h3>${item.title}</h3>
       <p>${item.body}</p>
       <a class="news-link" href="${item.url}" target="_blank" rel="noopener noreferrer">
-        🔗 Xで見る <span class="news-link-source">— ${item.source}</span>
+        🔗 ${item.linkLabel || 'Xで見る'} <span class="news-link-source">— ${item.source}</span>
       </a>
     `;
     grid.appendChild(card);
@@ -625,7 +625,7 @@ async function fetchLatestTrends() {
     }));
   }
 
-  for (const rssUrl of rssUrls) {
+  async function tryFetchRss(rssUrl, sourceLabel, mapFn) {
     for (const { fn, type } of proxyConfigs) {
       try {
         const apiUrl = fn(rssUrl);
@@ -646,28 +646,55 @@ async function fetchLatestTrends() {
         }
 
         if (!items || items.length === 0) continue;
-
-        const investmentFiltered = items.filter(item => {
-          const keyword = stripHtml(item.title || '');
-          const desc = stripHtml(item.description || '');
-          return isStronglyInvestmentRelated(keyword, desc);
-        });
-        // 投資関連が見つかればそれを優先、なければ上位トレンドをそのまま表示
-        const candidates = (investmentFiltered.length > 0 ? investmentFiltered : items).slice(0, 5);
-        return candidates.map(item => {
-          const keyword = stripHtml(item.title || '');
-          return {
-            title: '🔥 ' + keyword,
-            body: (() => { const t = stripHtml(item.description || ''); return t.length > 220 ? t.slice(0, 220) + '…' : t; })(),
-            url: `https://x.com/search?q=${encodeURIComponent(keyword)}&src=trend_click`,
-            source: 'Google Trends Japan'
-          };
-        });
+        return mapFn(items, sourceLabel);
       } catch (e) {
         console.warn('Trend fetch attempt failed:', e);
       }
     }
+    return null;
   }
+
+  function mapTrendItems(items, sourceLabel) {
+    const investmentFiltered = items.filter(item => {
+      const keyword = stripHtml(item.title || '');
+      const desc = stripHtml(item.description || '');
+      return isStronglyInvestmentRelated(keyword, desc);
+    });
+    const candidates = (investmentFiltered.length > 0 ? investmentFiltered : items).slice(0, 5);
+    return candidates.map(item => {
+      const keyword = stripHtml(item.title || '');
+      return {
+        title: '🔥 ' + keyword,
+        body: (() => { const t = stripHtml(item.description || ''); return t.length > 220 ? t.slice(0, 220) + '…' : t; })(),
+        url: `https://x.com/search?q=${encodeURIComponent(keyword)}&src=trend_click`,
+        source: sourceLabel
+      };
+    });
+  }
+
+  // Google Trendsを試みる（2 URL × 4プロキシ）
+  for (const rssUrl of rssUrls) {
+    const result = await tryFetchRss(rssUrl, 'Google Trends Japan', mapTrendItems);
+    if (result) return result;
+  }
+
+  // フォールバック: Yahoo Japan 経済ニュース
+  const yahooNewsResult = await tryFetchRss(
+    'https://news.yahoo.co.jp/rss/topics/business.xml',
+    'Yahoo Japan 経済ニュース',
+    (items) => items.slice(0, 5).map(item => {
+      const title = stripHtml(item.title || '');
+      return {
+        title: '📰 ' + title,
+        body: (() => { const t = stripHtml(item.description || ''); return t.length > 220 ? t.slice(0, 220) + '…' : t; })(),
+        url: item.link || `https://news.yahoo.co.jp/topics/business`,
+        linkLabel: 'ニュースを見る',
+        source: 'Yahoo Japan 経済ニュース'
+      };
+    })
+  );
+  if (yahooNewsResult) return yahooNewsResult;
+
   return null;
 }
 
