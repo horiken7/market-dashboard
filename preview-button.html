@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ボタンプレビュー</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --gold: #f0c040;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 48px;
+    padding: 40px;
+  }
+
+  /* ── ヘッダー再現 ── */
+  .header-demo {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 32px;
+    width: 100%;
+    max-width: 700px;
+    justify-content: space-between;
+  }
+  .brand-demo h1 {
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent) 0%, #b388ff 50%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .update-time { color: var(--muted); font-size: 0.85rem; }
+
+  /* ── 新ボタン ── */
+  .refresh-btn {
+    background: linear-gradient(135deg, var(--accent) 0%, #b388ff 60%, var(--gold) 100%);
+    color: #fff;
+    border: none;
+    padding: 9px 22px;
+    border-radius: 50px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: 0 0 18px rgba(88,166,255,0.3), 0 2px 8px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
+  }
+  .refresh-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, rgba(255,255,255,0.12) 0%, transparent 55%);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  .refresh-btn:hover {
+    box-shadow: 0 0 32px rgba(88,166,255,0.55), 0 4px 14px rgba(0,0,0,0.6);
+    transform: translateY(-2px);
+    filter: brightness(1.12);
+  }
+  .refresh-btn:active { transform: translateY(0); filter: brightness(1); }
+
+  /* ── 旧ボタン（比較用） ── */
+  .old-btn {
+    background: linear-gradient(135deg, #238636, #2ea043);
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .label {
+    color: var(--muted);
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .compare {
+    display: flex;
+    gap: 60px;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .compare-item { display: flex; flex-direction: column; align-items: center; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+  <!-- ヘッダー全体の再現 -->
+  <div>
+    <div class="label">ヘッダー全体イメージ</div>
+    <div class="header-demo">
+      <div class="brand-demo"><h1>Market Dashboard</h1></div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <span class="update-time">最終更新: 2026/3/11 10:00 (JST)</span>
+        <button class="refresh-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>更新
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新旧比較 -->
+  <div>
+    <div class="label">新旧比較</div>
+    <div class="compare">
+      <div class="compare-item">
+        <div class="label">変更前</div>
+        <button class="old-btn">🔄 更新</button>
+      </div>
+      <div class="compare-item">
+        <div class="label">変更後</div>
+        <button class="refresh-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>更新
+        </button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
