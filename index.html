@@ -667,7 +667,7 @@ async function fetchLatestTrends() {
       const keyword = stripHtml(item.title || '');
       return {
         title: '🔥 ' + keyword,
-        body: (() => { const t = stripHtml(item.description || ''); return t.length > 220 ? t.slice(0, 220) + '…' : t; })(),
+        body: (() => { const t = stripHtml(item.description || '').trim(); if (t.length < 5) return `「${keyword}」がGoogleトレンドで急上昇中です。`; return t.length > 220 ? t.slice(0, 220) + '…' : t; })(),
         url: `https://x.com/search?q=${encodeURIComponent(keyword)}&src=trend_click`,
         source: sourceLabel
       };
