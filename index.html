@@ -148,7 +148,7 @@
     padding-left: 12px;
     border-left: 3px solid var(--accent);
   }
-  .section-title.gold-border { border-left-color: var(--gold); }
+
 
   .news-grid {
     display: grid;
@@ -200,7 +200,7 @@
     font-weight: 600;
   }
   .tag-news { background: rgba(88,166,255,0.15); color: var(--accent); }
-  .tag-trend { background: rgba(240,192,64,0.15); color: var(--gold); }
+
 
   .footer {
     text-align: center;
@@ -231,8 +231,6 @@
 <h2 class="section-title">📰 価格に影響を及ぼした重要ニュース</h2>
 <div class="news-grid" id="newsGrid"></div>
 
-<h2 class="section-title gold-border">🔥 急上昇トレンド・注目ニュース</h2>
-<div class="news-grid" id="trendGrid"></div>
 
 <div class="footer">
   <p>※ 投資信託の基準価額は前営業日の終値です。暗号資産はリアルタイム参考価格です。</p>
@@ -345,7 +343,6 @@ const ASSETS = [
 
 let NEWS_ITEMS = [];
 
-let TREND_ITEMS = [];
 
 function formatNumber(num, decimals) {
   return num.toLocaleString('ja-JP', {
@@ -400,27 +397,6 @@ function renderNews() {
   });
 }
 
-function renderTrends() {
-  const grid = document.getElementById('trendGrid');
-  grid.innerHTML = '';
-  if (TREND_ITEMS.length === 0) {
-    grid.innerHTML = '<div style="color:var(--muted);padding:20px;grid-column:1/-1;">トレンドを取得できませんでした。しばらく後に更新ボタンをお試しください。</div>';
-    return;
-  }
-  TREND_ITEMS.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'news-card';
-    card.innerHTML = `
-      <span class="news-tag tag-trend">TREND</span>
-      <h3>${item.title}</h3>
-      <p>${item.body}</p>
-      <a class="news-link" href="${item.url}" target="_blank" rel="noopener noreferrer">
-        🔗 ${item.linkLabel || 'Xで見る'} <span class="news-link-source">— ${item.source}</span>
-      </a>
-    `;
-    grid.appendChild(card);
-  });
-}
 
 function updateTimestamp() {
   const now = new Date();
@@ -607,116 +583,6 @@ function isInvestmentRelated(keyword, description) {
   return INVESTMENT_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
 }
 
-// Trends用の厳しい判定: タイトル自体にキーワードがあるか、説明文に2つ以上のキーワードがある場合のみ通過
-function isStronglyInvestmentRelated(title, description) {
-  const titleText = title.toLowerCase();
-  const descText = description.toLowerCase();
-  const titleMatches = INVESTMENT_KEYWORDS.some(kw => titleText.includes(kw.toLowerCase()));
-  if (titleMatches) return true;
-  const descMatchCount = INVESTMENT_KEYWORDS.filter(kw => descText.includes(kw.toLowerCase())).length;
-  return descMatchCount >= 2;
-}
-
-async function fetchLatestTrends() {
-  // 複数のRSSプロキシとURLを試みる
-  const rssUrls = [
-    'https://trends.google.com/trending/rss?geo=JP',
-    'https://trends.google.com/trends/trendingsearches/daily/rss?geo=JP'
-  ];
-  // type: 'json' = JSONレスポンス(rss2json/allorigins形式), 'raw' = 生XML
-  const proxyConfigs = [
-    { fn: (url) => `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=20`, type: 'rss2json' },
-    { fn: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, type: 'allorigins' },
-    { fn: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`, type: 'raw' },
-    { fn: (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, type: 'raw' },
-  ];
-
-  function parseXmlItems(xmlText) {
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(xmlText, 'text/xml');
-    const entries = Array.from(xml.querySelectorAll('item'));
-    if (entries.length === 0) return null;
-    return entries.map(el => ({
-      title: el.querySelector('title')?.textContent || '',
-      description: el.querySelector('description')?.textContent || ''
-    }));
-  }
-
-  async function tryFetchRss(rssUrl, sourceLabel, mapFn) {
-    for (const { fn, type } of proxyConfigs) {
-      try {
-        const apiUrl = fn(rssUrl);
-        const res = await fetch(apiUrl);
-        if (!res.ok) continue;
-
-        let items = null;
-        if (type === 'raw') {
-          const text = await res.text();
-          items = parseXmlItems(text);
-        } else {
-          const raw = await res.json();
-          if (type === 'rss2json' && raw.status === 'ok' && raw.items && raw.items.length > 0) {
-            items = raw.items;
-          } else if (type === 'allorigins' && raw.contents) {
-            items = parseXmlItems(raw.contents);
-          }
-        }
-
-        if (!items || items.length === 0) continue;
-        return mapFn(items, sourceLabel);
-      } catch (e) {
-        console.warn('Trend fetch attempt failed:', e);
-      }
-    }
-    return null;
-  }
-
-  function mapTrendItems(items, sourceLabel) {
-    const investmentFiltered = items.filter(item => {
-      const keyword = stripHtml(item.title || '');
-      const desc = stripHtml(item.description || '');
-      return isStronglyInvestmentRelated(keyword, desc);
-    });
-    // 投資関連を優先しつつ、常に3件表示するため残りを補完
-    const nonFiltered = items.filter(item => !investmentFiltered.includes(item));
-    const candidates = [...investmentFiltered, ...nonFiltered].slice(0, 3);
-    return candidates.map(item => {
-      const keyword = stripHtml(item.title || '');
-      return {
-        title: '🔥 ' + keyword,
-        body: (() => { const t = stripHtml(item.description || '').trim(); if (t.length < 5) return `「${keyword}」がGoogleトレンドで急上昇中です。`; return t.length > 220 ? t.slice(0, 220) + '…' : t; })(),
-        url: `https://x.com/search?q=${encodeURIComponent(keyword)}&src=trend_click`,
-        source: sourceLabel
-      };
-    });
-  }
-
-  // Google Trendsを試みる（2 URL × 4プロキシ）
-  for (const rssUrl of rssUrls) {
-    const result = await tryFetchRss(rssUrl, 'Google Trends Japan', mapTrendItems);
-    if (result) return result;
-  }
-
-  // フォールバック: Yahoo Japan 経済ニュース
-  const yahooNewsResult = await tryFetchRss(
-    'https://news.yahoo.co.jp/rss/topics/business.xml',
-    'Yahoo Japan 経済ニュース',
-    (items) => items.slice(0, 3).map(item => {
-      const title = stripHtml(item.title || '');
-      return {
-        title: '📰 ' + title,
-        body: (() => { const t = stripHtml(item.description || ''); return t.length > 220 ? t.slice(0, 220) + '…' : t; })(),
-        url: item.link || `https://news.yahoo.co.jp/topics/business`,
-        linkLabel: 'ニュースを見る',
-        source: 'Yahoo Japan 経済ニュース'
-      };
-    })
-  );
-  if (yahooNewsResult) return yahooNewsResult;
-
-  return null;
-}
-
 async function refreshAll() {
   const btn = document.getElementById('refreshBtn');
   btn.classList.add('loading');
@@ -725,7 +591,7 @@ async function refreshAll() {
     const [
       btcData, solData, forexRate, nasdaqData, goldData,
       fundWorldData, fundSP500Data, fundTracersSP500Data, fundTracersNasdaqData,
-      newsData, trendsData
+      newsData
     ] = await Promise.all([
       fetchCryptoPrice('BTCUSDT'),
       fetchCryptoPrice('SOLUSDT'),
@@ -736,8 +602,7 @@ async function refreshAll() {
       fetchFundNAV('0331319B'),  // eMAXIS Slim S&P500
       fetchFundNAV('9I311179'),  // Tracers S&P500ゴールドプラス
       fetchFundNAV('9I311188'),  // Tracers NASDAQ100ゴールドプラス
-      fetchLatestNews(),
-      fetchLatestTrends()
+      fetchLatestNews()
     ]);
 
     if (btcData) {
@@ -783,14 +648,12 @@ async function refreshAll() {
       asset.note = '基準価額（Yahoo!ファイナンス）';
     });
     NEWS_ITEMS = newsData || [];
-    TREND_ITEMS = trendsData || [];
   } catch (e) {
     console.warn('Refresh error:', e);
   }
 
   renderPrices();
   renderNews();
-  renderTrends();
   updateTimestamp();
 
   btn.classList.remove('loading');
@@ -804,7 +667,6 @@ function showLoading(gridId, label) {
 async function init() {
   renderPrices();
   showLoading('newsGrid', '最新ニュース');
-  showLoading('trendGrid', 'トレンド');
   updateTimestamp();
   await refreshAll();
 }
