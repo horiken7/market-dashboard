@@ -214,7 +214,7 @@
 <h2 class="section-title">📰 価格に影響を及ぼした重要ニュース</h2>
 <div class="news-grid" id="newsGrid"></div>
 
-<h2 class="section-title gold-border">🔥 Xで話題のトレンド</h2>
+<h2 class="section-title gold-border">🔥 急上昇トレンド・注目ニュース</h2>
 <div class="news-grid" id="trendGrid"></div>
 
 <div class="footer">
@@ -660,7 +660,9 @@ async function fetchLatestTrends() {
       const desc = stripHtml(item.description || '');
       return isStronglyInvestmentRelated(keyword, desc);
     });
-    const candidates = (investmentFiltered.length > 0 ? investmentFiltered : items).slice(0, 5);
+    // 投資関連を優先しつつ、常に3件表示するため残りを補完
+    const nonFiltered = items.filter(item => !investmentFiltered.includes(item));
+    const candidates = [...investmentFiltered, ...nonFiltered].slice(0, 3);
     return candidates.map(item => {
       const keyword = stripHtml(item.title || '');
       return {
@@ -682,7 +684,7 @@ async function fetchLatestTrends() {
   const yahooNewsResult = await tryFetchRss(
     'https://news.yahoo.co.jp/rss/topics/business.xml',
     'Yahoo Japan 経済ニュース',
-    (items) => items.slice(0, 5).map(item => {
+    (items) => items.slice(0, 3).map(item => {
       const title = stripHtml(item.title || '');
       return {
         title: '📰 ' + title,
