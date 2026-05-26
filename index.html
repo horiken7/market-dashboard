@@ -243,8 +243,8 @@ const ASSETS = [
   {
     id: 'usdjpy',
     label: 'USD/JPY',
-    price: 157.69,
-    prevPrice: 157.47,
+    price: 145.00,
+    prevPrice: 145.00,
     unit: '円',
     prefix: '',
     decimals: 2,
@@ -252,93 +252,115 @@ const ASSETS = [
     source: 'forex'
   },
   {
-    id: 'gold',
-    label: '金価格 (USD/oz)',
-    price: 5154.85,
-    prevPrice: 5131.85,
+    id: 'xauusd',
+    label: 'XAUUSD (金スポット)',
+    price: 3200.00,
+    prevPrice: 3200.00,
     unit: '',
     prefix: '$',
     decimals: 2,
-    note: 'スポット価格（ドル建て）',
+    note: 'スポット価格（USD/oz）',
+    source: 'commodity'
+  },
+  {
+    id: 'vix',
+    label: 'VIX指数',
+    price: 20.00,
+    prevPrice: 20.00,
+    unit: '',
+    prefix: '',
+    decimals: 2,
+    note: '恐怖指数',
+    source: 'index'
+  },
+  {
+    id: 'wti',
+    label: 'WTI原油先物',
+    price: 65.00,
+    prevPrice: 65.00,
+    unit: '',
+    prefix: '$',
+    decimals: 2,
+    note: '先物価格（USD/バレル）',
     source: 'commodity'
   },
   {
     id: 'emaxis_world',
     label: 'eMAXIS Slim 全世界株式(除く日本)',
-    price: 34831,
-    prevPrice: 34779,
+    price: 30000,
+    prevPrice: 30000,
     unit: '円',
     prefix: '',
     decimals: 0,
-    note: '基準価額（3/3時点）',
+    note: '基準価額',
     source: 'fund'
   },
   {
     id: 'emaxis_sp500',
     label: 'eMAXIS Slim S&P500',
-    price: 39699,
-    prevPrice: 39439,
+    price: 35000,
+    prevPrice: 35000,
     unit: '円',
     prefix: '',
     decimals: 0,
-    note: '基準価額（3/3時点）',
+    note: '基準価額',
     source: 'fund'
   },
   {
     id: 'nasdaq100',
     label: 'NASDAQ 100',
-    price: 20529.19,
-    prevPrice: 20322.51,
+    price: 19000.00,
+    prevPrice: 19000.00,
     unit: '',
     prefix: '',
     decimals: 2,
-    note: '指数値（3/4終値）',
+    note: '指数値',
     source: 'index'
   },
   {
-    id: 'tracers_sp500gold',
-    label: 'Tracers S&P500ゴールドプラス',
-    price: 49015,
-    prevPrice: 48148,
-    unit: '円',
+    id: 'sox',
+    label: 'SOX指数',
+    price: 4000.00,
+    prevPrice: 4000.00,
+    unit: '',
     prefix: '',
-    decimals: 0,
-    note: '基準価額（3/3時点）',
-    source: 'fund'
+    decimals: 2,
+    note: '半導体株指数',
+    source: 'index'
   },
   {
-    id: 'tracers_nasdaqgold',
-    label: 'Tracers NASDAQ100ゴールドプラス',
-    price: 18842,
-    prevPrice: 18521,
+    id: 'etf2244',
+    label: '2244 Global X US Tech Top 20',
+    price: 2000,
+    prevPrice: 2000,
     unit: '円',
     prefix: '',
     decimals: 0,
-    note: '基準価額（3/3時点）',
-    source: 'fund'
+    note: '東証ETF',
+    source: 'stock'
+  },
+  {
+    id: 'stock4755',
+    label: '4755 楽天グループ',
+    price: 800,
+    prevPrice: 800,
+    unit: '円',
+    prefix: '',
+    decimals: 0,
+    note: '株価（東証）',
+    source: 'stock'
   },
   {
     id: 'btcusdt',
     label: 'BTC/USDT',
-    price: 71020.29,
-    prevPrice: 67449.00,
+    price: 85000.00,
+    prevPrice: 85000.00,
     unit: '',
     prefix: '$',
     decimals: 2,
-    note: '暗号資産（24h参考価格）',
+    note: '暗号資産（リアルタイム）',
     source: 'crypto'
   },
-  {
-    id: 'solusdt',
-    label: 'SOL/USDT',
-    price: 92.08,
-    prevPrice: 84.57,
-    unit: '',
-    prefix: '$',
-    decimals: 2,
-    note: '暗号資産（24h参考価格）',
-    source: 'crypto'
-  }
 ];
 
 let NEWS_ITEMS = [];
@@ -601,71 +623,66 @@ async function refreshAll() {
 
   try {
     const [
-      btcData, solData, forexRate, nasdaqData, goldData,
-      fundWorldData, fundSP500Data, fundTracersSP500Data, fundTracersNasdaqData,
+      btcData, forexRate,
+      xauData, vixData, wtiData, nasdaqData, soxData,
+      etf2244Data, stock4755Data,
+      fundWorldData, fundSP500Data,
       newsData
     ] = await Promise.all([
       fetchCryptoPrice('BTCUSDT'),
-      fetchCryptoPrice('SOLUSDT'),
       fetchForexRate(),
+      fetchYahooFinance('XAUUSD=X'),
+      fetchYahooFinance('^VIX'),
+      fetchYahooFinance('CL=F'),
       fetchYahooFinance('^NDX'),
-      fetchYahooFinance('GC=F'),
+      fetchYahooFinance('^SOX'),
+      fetchYahooFinance('2244.T'),
+      fetchYahooFinance('4755.T'),
       fetchFundNAV('0331418A'),  // eMAXIS Slim 全世界株式(除く日本)
       fetchFundNAV('0331319B'),  // eMAXIS Slim S&P500
-      fetchFundNAV('9I311179'),  // Tracers S&P500ゴールドプラス
-      fetchFundNAV('9I311188'),  // Tracers NASDAQ100ゴールドプラス
       fetchLatestNews()
     ]);
 
     if (btcData) {
-      const btc = ASSETS.find(a => a.id === 'btcusdt');
-      btc.prevPrice = btcData.prevPrice;
-      btc.price = btcData.price;
-      btc.note = '暗号資産（リアルタイム）';
-    }
-    if (solData) {
-      const sol = ASSETS.find(a => a.id === 'solusdt');
-      sol.prevPrice = solData.prevPrice;
-      sol.price = solData.price;
-      sol.note = '暗号資産（リアルタイム）';
+      const a = ASSETS.find(a => a.id === 'btcusdt');
+      a.price = btcData.price; a.prevPrice = btcData.prevPrice;
+      a.note = '暗号資産（リアルタイム）';
     }
     if (forexRate) {
-      const usd = ASSETS.find(a => a.id === 'usdjpy');
-      usd.prevPrice = usd.price;
-      usd.price = forexRate;
-      usd.note = 'リアルタイム為替レート（更新済）';
+      const a = ASSETS.find(a => a.id === 'usdjpy');
+      a.prevPrice = a.price; a.price = forexRate;
+      a.note = 'リアルタイム為替レート';
     }
-    const ndx = ASSETS.find(a => a.id === 'nasdaq100');
-    if (nasdaqData) {
-      ndx.price = nasdaqData.price;
-      ndx.prevPrice = nasdaqData.prevPrice;
-      ndx.note = 'NASDAQ 100（リアルタイム）';
-    } else {
-      ndx.note = '指数値（取得失敗・参考値）';
-    }
-    const gold = ASSETS.find(a => a.id === 'gold');
-    if (goldData) {
-      gold.price = goldData.price;
-      gold.prevPrice = goldData.prevPrice;
-      gold.note = 'スポット価格（リアルタイム）';
-    } else {
-      gold.note = 'スポット価格（取得失敗・参考値）';
-    }
+
+    const yahooUpdates = [
+      { data: xauData,      id: 'xauusd',     note: 'スポット価格（USD/oz）' },
+      { data: vixData,      id: 'vix',         note: '恐怖指数（リアルタイム）' },
+      { data: wtiData,      id: 'wti',         note: '先物価格（USD/バレル）' },
+      { data: nasdaqData,   id: 'nasdaq100',   note: 'NASDAQ 100（リアルタイム）' },
+      { data: soxData,      id: 'sox',         note: '半導体株指数（リアルタイム）' },
+      { data: etf2244Data,  id: 'etf2244',     note: '東証ETF（リアルタイム）' },
+      { data: stock4755Data,id: 'stock4755',   note: '株価（東証・リアルタイム）' },
+    ];
+    yahooUpdates.forEach(({ data, id, note }) => {
+      const a = ASSETS.find(a => a.id === id);
+      if (data) { a.price = data.price; a.prevPrice = data.prevPrice; a.note = note; }
+      else { a.note = a.note.replace('（リアルタイム）', '') + '（取得失敗・参考値）'; }
+    });
+
     [
-      { data: fundWorldData,        id: 'emaxis_world' },
-      { data: fundSP500Data,        id: 'emaxis_sp500' },
-      { data: fundTracersSP500Data, id: 'tracers_sp500gold' },
-      { data: fundTracersNasdaqData,id: 'tracers_nasdaqgold' },
+      { data: fundWorldData, id: 'emaxis_world' },
+      { data: fundSP500Data, id: 'emaxis_sp500' },
     ].forEach(({ data, id }) => {
-      const asset = ASSETS.find(a => a.id === id);
+      const a = ASSETS.find(a => a.id === id);
       if (data) {
-        asset.price = data.price;
-        if (data.prevPrice !== null) asset.prevPrice = data.prevPrice;
-        asset.note = '基準価額（Yahoo!ファイナンス）';
+        a.price = data.price;
+        if (data.prevPrice !== null) a.prevPrice = data.prevPrice;
+        a.note = '基準価額（前営業日）';
       } else {
-        asset.note = '基準価額（取得失敗・参考値）';
+        a.note = '基準価額（取得失敗・参考値）';
       }
     });
+
     NEWS_ITEMS = newsData || [];
   } catch (e) {
     console.warn('Refresh error:', e);
