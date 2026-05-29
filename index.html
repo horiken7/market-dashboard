@@ -1006,6 +1006,23 @@ function isEnglishText(text) {
   return asciiLetters / letters.length > 0.85;
 }
 
+function containsJapanese(text) {
+  return /[\u3040-\u30ff\u3400-\u9fff]/.test(String(text || ''));
+}
+
+function fallbackJapaneseSummary(text) {
+  const source = String(text || '').toLowerCase();
+  const topics = [];
+  if (/ferrari|electric vehicle|ev/.test(source)) topics.push('EV関連企業の発表や株価反応');
+  if (/ecb|rate|interest|central bank|bank/.test(source)) topics.push('欧州の金利見通しや銀行セクター');
+  if (/stock|shares|market|nasdaq|s&p|dow/.test(source)) topics.push('株式市場の動向');
+  if (/oil|crude|gold|commodity/.test(source)) topics.push('資源価格の変動');
+  if (/bitcoin|crypto|btc/.test(source)) topics.push('暗号資産市場');
+  if (/tariff|trade|iran|war|geopolitical/.test(source)) topics.push('地政学・貿易リスク');
+  if (topics.length === 0) topics.push('海外市場の投資関連ニュース');
+  return `${topics.slice(0, 2).join('、')}についてのニュースです。詳細は元記事で確認してください。`;
+}
+
 async function translateToJapanese(text) {
   try {
     const res = await withTimeout(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ja`, {}, 8000);
@@ -1015,6 +1032,13 @@ async function translateToJapanese(text) {
   } catch {
     return text;
   }
+}
+
+async function ensureJapaneseText(text) {
+  if (!isEnglishText(text)) return text;
+  const translated = await translateToJapanese(text);
+  if (translated && containsJapanese(translated)) return translated;
+  return fallbackJapaneseSummary(text);
 }
 
 function parseRssXml(xmlText, source) {
@@ -1100,8 +1124,8 @@ async function fetchLatestNews() {
   const finalItems = deduped.slice(0, 5);
   await Promise.allSettled(finalItems.map(async item => {
     const [translatedTitle, translatedBody] = await Promise.all([
-      isEnglishText(item.title) ? translateToJapanese(item.title) : Promise.resolve(item.title),
-      isEnglishText(item.body) ? translateToJapanese(item.body) : Promise.resolve(item.body)
+      ensureJapaneseText(item.title),
+      ensureJapaneseText(item.body)
     ]);
     item.title = translatedTitle;
     item.body = translatedBody;
