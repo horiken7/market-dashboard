@@ -1099,7 +1099,12 @@ async function fetchLatestNews() {
 
   const finalItems = deduped.slice(0, 5);
   await Promise.allSettled(finalItems.map(async item => {
-    if (isEnglishText(item.title)) item.title = await translateToJapanese(item.title);
+    const [translatedTitle, translatedBody] = await Promise.all([
+      isEnglishText(item.title) ? translateToJapanese(item.title) : Promise.resolve(item.title),
+      isEnglishText(item.body) ? translateToJapanese(item.body) : Promise.resolve(item.body)
+    ]);
+    item.title = translatedTitle;
+    item.body = translatedBody;
   }));
   return finalItems;
 }
