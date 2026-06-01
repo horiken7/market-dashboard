@@ -571,7 +571,7 @@
 
     <footer class="footer">
       <p>投資信託の基準価額は前営業日の終値です。暗号資産、為替、指数、商品は参考値として表示します。</p>
-      <p>データ取得元: Yahoo Finance、CoinGecko、Frankfurter、三菱UFJ銀行CSV、RSS等。</p>
+      <p>データ取得元: Yahoo Finance、CoinGecko、Frankfurter、三菱UFJ銀行CSV、RSS、AltIndex、Yahoo!リアルタイム検索等。</p>
     </footer>
   </div>
 </main>
@@ -598,7 +598,7 @@ let NEWS_ITEMS = [];
 const DEFAULT_X_TRENDS = [
   {
     title: '日経平均・日本株',
-    body: '日経平均の大幅上昇や日本株の短期売買ネタが目立っています。指数、先物、個別株の反応を追う入口です。',
+    body: '日経平均、先物、日本株の短期売買ネタを確認します。指数、先物、個別株の反応を追う入口です。',
     source: 'Yahoo!リアルタイム検索',
     url: 'https://search.yahoo.co.jp/realtime/search?p=%E6%97%A5%E7%B5%8C%E5%B9%B3%E5%9D%87%20%E6%97%A5%E6%9C%AC%E6%A0%AA'
   },
@@ -613,6 +613,18 @@ const DEFAULT_X_TRENDS = [
     body: 'ビットコイン、暗号資産、関連株の値動きについて短期トレードやニュース反応の投稿が増えています。',
     source: 'Yahoo!リアルタイム検索',
     url: 'https://search.yahoo.co.jp/realtime/search?p=BTC%20%E6%9A%97%E5%8F%B7%E8%B3%87%E7%94%A3'
+  },
+  {
+    title: 'ドル円・為替',
+    body: 'ドル円、円安、円高、金利観測に関する投稿を確認します。為替が株式・投信評価に与える影響を追う入口です。',
+    source: 'Yahoo!リアルタイム検索',
+    url: 'https://search.yahoo.co.jp/realtime/search?p=%E3%83%89%E3%83%AB%E5%86%86%20%E7%82%BA%E6%9B%BF'
+  },
+  {
+    title: 'NISA・投資信託',
+    body: 'NISA、投資信託、オルカン、S&P500積立に関する投稿を確認します。個人投資家の資金配分の変化を追う入口です。',
+    source: 'Yahoo!リアルタイム検索',
+    url: 'https://search.yahoo.co.jp/realtime/search?p=NISA%20%E6%8A%95%E8%B3%87%E4%BF%A1%E8%A8%97'
   }
 ];
 
@@ -715,7 +727,7 @@ function renderNews() {
   const grid = document.getElementById('newsGrid');
   const heroGrid = document.getElementById('heroNewsGrid');
   grid.innerHTML = '';
-  grid.innerHTML = X_TRENDS.slice(0, 3).map((item, index) => `
+  grid.innerHTML = X_TRENDS.slice(0, 5).map((item, index) => `
     <div class="news-card">
       <div class="news-meta">
         <span>TREND ${String(index + 1).padStart(2, '0')}</span>
@@ -754,7 +766,7 @@ function updateTimestamp() {
 
 function showLoading(gridId, label) {
   if (gridId === 'newsGrid') {
-    document.getElementById(gridId).innerHTML = X_TRENDS.slice(0, 3).map((item, index) => `
+    document.getElementById(gridId).innerHTML = X_TRENDS.slice(0, 5).map((item, index) => `
       <div class="news-card">
         <div class="news-meta">
           <span>TREND ${String(index + 1).padStart(2, '0')}</span>
@@ -808,6 +820,110 @@ const X_TREND_CANDIDATES = [
   }
 ];
 
+const ALTINDEX_X_STOCKS_URL = 'https://altindex.com/x-stocks';
+
+const STOCK_TOPIC_DETAILS = {
+  IBM: 'AI、エンタープライズIT、決算・大型株物色の文脈で注目されています。',
+  NOK: '通信インフラ、ネットワーク設備、低位大型株の再評価狙いで話題化しやすい銘柄です。',
+  BB: 'サイバーセキュリティ、IoT、自動車ソフトウェアに加え、ミーム株的な記憶でも反応を集めます。',
+  SOFI: '金利見通し、個人向け金融、証券・ローン事業の成長期待が会話の中心になりやすい銘柄です。',
+  AMC: '短期需給、空売り、個人投資家コミュニティの盛り上がりで注目されやすいミーム株です。',
+  GME: '短期需給、空売り、個人投資家コミュニティの盛り上がりで注目されやすいミーム株です。',
+  ORCL: 'クラウド、AIインフラ、企業向けソフトウェア投資の文脈で注目されています。',
+  GOOGL: 'AI検索、広告、クラウドをめぐる大型テック株の評価が会話の中心になりやすい銘柄です。',
+  AMZN: 'クラウド、EC、AI投資をめぐる大型テック株の評価が会話の中心になりやすい銘柄です。',
+  NVDA: 'AI半導体、データセンター投資、ハイテク株の需給を象徴する銘柄として注目されています。',
+  TSLA: 'EV、自動運転、短期需給をめぐって投稿量が増えやすい大型個人投資家銘柄です。',
+  PLTR: 'AI、政府・企業向けデータ分析、成長株評価の文脈で話題になりやすい銘柄です。',
+  COIN: '暗号資産相場、米国規制、取引量の変化と連動して注目されやすい銘柄です。',
+  MSTR: 'ビットコイン保有企業として、BTCの値動きとあわせて注目されやすい銘柄です。'
+};
+
+function xSearchUrl(query) {
+  return `https://x.com/search?q=${encodeURIComponent(query)}&src=typed_query`;
+}
+
+function normalizeAltIndexCompany(company, symbol) {
+  company = company.replace(/^.*(?:Generate|Analysis)\s+/, '').replace(/^Sentiment Price AI Score AI Analysis\s+/, '').trim();
+  const parts = company.split(' ').filter(Boolean);
+  if (parts.length % 2 === 0) {
+    const half = parts.length / 2;
+    if (parts.slice(0, half).join(' ') === parts.slice(half).join(' ')) {
+      return parts.slice(0, half).join(' ');
+    }
+  }
+  return company.replace(new RegExp(`\\s+${symbol}$`), '').trim();
+}
+
+function buildStockTrendSummary(company, symbol, mentions, sentiment) {
+  const detail = STOCK_TOPIC_DETAILS[symbol] || 'X上の言及増加により、投資家の短期的な関心が高まっている銘柄です。';
+  return `${company}（${symbol}）はX上で${mentions}件の言及、センチメントは${sentiment}として検出されました。${detail}`;
+}
+
+function createAltIndexTrend(company, symbol, mentions, sentiment) {
+  return {
+    title: `${company}（${symbol}）`,
+    body: buildStockTrendSummary(company, symbol, mentions, sentiment),
+    source: 'AltIndex X mentions',
+    url: xSearchUrl(`$${symbol} stock`),
+    score: Number(String(mentions).replace(/,/g, '')) || 0
+  };
+}
+
+function parseAltIndexRows(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const rows = [...doc.querySelectorAll('table tbody tr')];
+  const items = [];
+  const seen = new Set();
+
+  rows.forEach(row => {
+    if (items.length >= 5) return;
+    const cells = [...row.querySelectorAll('td')];
+    if (cells.length < 5) return;
+    const companyCell = cells[1];
+    const company = companyCell.querySelector('h6')?.textContent?.trim();
+    const symbol = companyCell.querySelector('span')?.textContent?.trim();
+    const mentions = cells[2].childNodes[0]?.textContent?.trim() || cells[2].textContent.trim().match(/[\d,]+/)?.[0];
+    const sentiment = cells[3].textContent.trim() || 'Bullish';
+    if (!company || !symbol || !mentions || seen.has(symbol)) return;
+    seen.add(symbol);
+    items.push(createAltIndexTrend(company, symbol, mentions, sentiment));
+  });
+
+  return items;
+}
+
+function parseAltIndexText(html) {
+  const text = stripHtml(html).replace(/\s+/g, ' ');
+  const tableStart = text.indexOf('Company Mentions Sentiment Price');
+  const tableEnd = text.indexOf('FAQ - X Stocks');
+  const tableText = text.slice(Math.max(0, tableStart), tableEnd > tableStart ? tableEnd : undefined);
+  const pattern = /([A-Z][A-Za-z0-9 .&-]{1,42}?)\s+([A-Z]{1,5})\s+([\d,]+)\s+[\d.]+%\s+(Bullish|Bearish|Neutral)\s+\$?[\d,.]+/g;
+  const seen = new Set();
+  const items = [];
+  let match;
+
+  while ((match = pattern.exec(tableText)) && items.length < 5) {
+    const symbol = match[2].trim();
+    const company = normalizeAltIndexCompany(match[1].trim().replace(/\s+/g, ' '), symbol);
+    if (seen.has(symbol)) continue;
+    seen.add(symbol);
+    items.push(createAltIndexTrend(company, symbol, match[3], match[4]));
+  }
+
+  return items;
+}
+
+function parseAltIndexXStocks(html) {
+  const rowItems = parseAltIndexRows(html);
+  return rowItems.length > 0 ? rowItems : parseAltIndexText(html);
+}
+
+async function fetchAltIndexXStockTrends() {
+  const html = await fetchFirstText(proxyUrls(ALTINDEX_X_STOCKS_URL), 12000);
+  return html ? parseAltIndexXStocks(html) : [];
+}
+
 function yahooRealtimeUrl(query) {
   return `https://search.yahoo.co.jp/realtime/search?p=${encodeURIComponent(query)}`;
 }
@@ -823,32 +939,47 @@ function scoreRealtimeText(text) {
 }
 
 async function fetchXInvestmentTrends() {
-  const results = await Promise.allSettled(X_TREND_CANDIDATES.map(async candidate => {
-    const url = yahooRealtimeUrl(candidate.query);
-    const readerUrl = jinaReaderUrl(url);
-    const text = await fetchFirstText([
-      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(readerUrl)}`,
-      readerUrl,
-      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-      url
-    ], 10000);
-    if (!text) return null;
-    const score = scoreRealtimeText(stripHtml(text));
-    return {
-      title: candidate.title,
-      body: `${candidate.body} 更新時点のリアルタイム検索で反応を確認しました。`,
-      source: 'Yahoo!リアルタイム検索',
-      url,
-      score
-    };
-  }));
+  const [altIndexResult, realtimeResult] = await Promise.allSettled([
+    fetchAltIndexXStockTrends(),
+    Promise.allSettled(X_TREND_CANDIDATES.map(async candidate => {
+      const url = yahooRealtimeUrl(candidate.query);
+      const readerUrl = jinaReaderUrl(url);
+      const text = await fetchFirstText([
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(readerUrl)}`,
+        readerUrl,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        url
+      ], 10000);
+      if (!text) return null;
+      const score = scoreRealtimeText(stripHtml(text));
+      return {
+        title: candidate.title,
+        body: `${candidate.body} 更新時点のリアルタイム検索で反応を確認しました。`,
+        source: 'Yahoo!リアルタイム検索',
+        url,
+        score
+      };
+    }))
+  ]);
 
-  const trends = results
-    .filter(result => result.status === 'fulfilled' && result.value)
-    .map(result => result.value)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+  const altIndexTrends = altIndexResult.status === 'fulfilled' ? altIndexResult.value : [];
+  const realtimeTrends = realtimeResult.status === 'fulfilled'
+    ? realtimeResult.value
+        .filter(result => result.status === 'fulfilled' && result.value)
+        .map(result => result.value)
+        .sort((a, b) => b.score - a.score)
+    : [];
+
+  const seen = new Set();
+  const trends = [...altIndexTrends, ...realtimeTrends, ...DEFAULT_X_TRENDS]
+    .filter(item => {
+      const key = item.title;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 5);
 
   return trends.length > 0 ? trends : DEFAULT_X_TRENDS;
 }
