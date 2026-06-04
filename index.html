@@ -641,7 +641,7 @@ td:first-child,th:first-child{text-align:left}
 </main>
 
 <script>
-const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+const API_BASE = "https://market-dashboard.ken060720.workers.dev";
 const UPDATE_INTERVAL = 60;
 let secondsLeft = UPDATE_INTERVAL;
 
@@ -727,16 +727,15 @@ function drawSpark(svgId, change){
 }
 
 async function fetchQuote(symbol){
-  const yurl = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(symbol);
-  const res = await fetch(CORS_PROXY + encodeURIComponent(yurl));
-  if(!res.ok) throw new Error("Yahoo取得失敗");
-  const json = await res.json();
-  const q = json.quoteResponse && json.quoteResponse.result && json.quoteResponse.result[0];
-  if(!q) throw new Error("データなし: " + symbol);
-  const price = q.regularMarketPrice ?? q.postMarketPrice ?? q.preMarketPrice;
-  const change = q.regularMarketChangePercent ?? 0;
-  const prev = q.regularMarketPreviousClose ?? (price / (1 + change/100));
-  return {price, change, prev};
+  const res = await fetch(API_BASE + "/quote?symbol=" + encodeURIComponent(symbol));
+  if(!res.ok) throw new Error("Worker取得失敗: " + symbol);
+  const q = await res.json();
+  if(q.error) throw new Error(q.error);
+  return {
+    price: q.price,
+    change: q.changePercent,
+    prev: q.previousClose
+  };
 }
 
 async function loadPrices(){
