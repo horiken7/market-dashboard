@@ -307,6 +307,243 @@ td:first-child,th:first-child{text-align:left}
   .kpi .value{font-size:24px}
   .action-links{grid-template-columns:1fr}
 }
+
+/* ===== Smartphone Optimized Layout ===== */
+.mobile-cards { display:none; }
+
+@media (max-width:760px){
+  body{
+    background:
+      radial-gradient(circle at 18% 0%, rgba(59,130,246,.14), transparent 30%),
+      var(--bg);
+  }
+  header{ position:relative; }
+  .header-inner{
+    display:block;
+    padding:12px 12px 10px;
+  }
+  h1{
+    font-size:16px;
+    line-height:1.35;
+    white-space:normal;
+    margin-bottom:10px;
+  }
+  .header-meta{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    font-size:11px;
+  }
+  .meta-block{
+    border-left:0;
+    padding-left:0;
+    padding:8px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:rgba(22,34,53,.8);
+  }
+  .meta-block b{ font-size:13px; }
+  .update-btn{
+    width:100%;
+    min-width:0;
+    grid-column:1 / -1;
+    padding:11px;
+    border-radius:12px;
+  }
+  .switch{
+    grid-column:1 / -1;
+    justify-content:space-between;
+    padding:8px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:rgba(22,34,53,.8);
+  }
+  .wrap{
+    padding:10px;
+  }
+  .kpi-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .kpi{
+    min-height:auto;
+    padding:10px;
+    grid-template-columns:32px 1fr;
+    gap:8px;
+    border-radius:12px;
+  }
+  .icon{
+    width:30px;
+    height:30px;
+    font-size:16px;
+    border-radius:10px;
+  }
+  .kpi .label{ font-size:10px; }
+  .kpi .value{ font-size:20px; }
+  .kpi .sub{ font-size:11px; }
+  .kpi-grid .kpi:first-child{
+    grid-column:1 / -1;
+  }
+  .main-grid{
+    display:block;
+  }
+  .section{
+    padding:12px;
+    margin-bottom:10px;
+  }
+  .section-title{
+    align-items:flex-start;
+    gap:6px;
+  }
+  .section-title h2{
+    font-size:16px;
+  }
+  .badge{
+    font-size:10px;
+    padding:2px 7px;
+    white-space:nowrap;
+  }
+
+  /* Hide wide table and show compact asset cards */
+  .table-wrap{ display:none; }
+  .mobile-cards{
+    display:grid;
+    gap:8px;
+  }
+  .asset-card{
+    border:1px solid var(--line);
+    background:rgba(30,41,59,.72);
+    border-radius:13px;
+    padding:10px;
+  }
+  .asset-card-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:8px;
+  }
+  .asset-name{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+    font-weight:900;
+  }
+  .asset-name span:last-child{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .asset-sub{
+    color:var(--muted);
+    font-size:11px;
+    margin-left:36px;
+    margin-top:-4px;
+  }
+  .asset-price{
+    font-size:18px;
+    font-weight:950;
+    text-align:right;
+    white-space:nowrap;
+  }
+  .asset-card-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:6px;
+    margin-top:8px;
+  }
+  .asset-metric{
+    background:rgba(7,17,31,.45);
+    border:1px solid rgba(51,65,85,.72);
+    border-radius:10px;
+    padding:7px;
+    text-align:center;
+  }
+  .asset-metric label{
+    display:block;
+    color:var(--muted);
+    font-size:10px;
+    margin-bottom:2px;
+  }
+  .asset-metric b{
+    font-size:12px;
+  }
+  .asset-card .spark{
+    width:100%;
+    height:28px;
+    margin-top:4px;
+  }
+  .legend{
+    gap:8px;
+    font-size:10px;
+    margin-top:8px;
+  }
+
+  .news-item{
+    grid-template-columns:1fr;
+    padding:10px;
+    gap:8px;
+  }
+  .news-head{
+    gap:8px;
+  }
+  .rank{
+    width:26px;
+    height:26px;
+    font-size:12px;
+  }
+  .news-title{
+    font-size:13px;
+  }
+  .source{
+    font-size:10px;
+  }
+  .summary{
+    font-size:12px;
+    line-height:1.55;
+  }
+  .action-links{
+    grid-template-columns:1fr 1fr 1fr;
+    gap:5px;
+  }
+  .action-links a{
+    font-size:11px;
+    padding:6px 4px;
+  }
+
+  .bottom-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+    margin-top:0;
+  }
+  .ai-comment,
+  .mini{
+    padding:12px;
+  }
+  .mini .value{
+    font-size:20px;
+  }
+}
+
+@media (max-width:420px){
+  .kpi-grid{
+    grid-template-columns:1fr;
+  }
+  .header-meta{
+    grid-template-columns:1fr;
+  }
+  .action-links{
+    grid-template-columns:1fr;
+  }
+  .asset-card-grid{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -359,6 +596,7 @@ td:first-child,th:first-child{text-align:left}
           </tr>
         </table>
       </div>
+      <div id="mobileAssetCards" class="mobile-cards"></div>
       <div class="legend">
         <span><span class="dot" style="background:#22c55e"></span>買い: +1.5%以上</span>
         <span><span class="dot" style="background:#facc15"></span>様子見: -1.5%〜+1.5%</span>
@@ -518,9 +756,38 @@ async function loadPrices(){
   renderPrices();
 }
 
+
+function renderMobileCards(){
+  const container = document.getElementById("mobileAssetCards");
+  if(!container) return;
+  container.innerHTML = "";
+
+  dataset.forEach((d, idx)=>{
+    if(d.fund){
+      container.innerHTML += '<div class="asset-card"><div class="asset-card-top"><div><div class="asset-name"><span class="asset-emoji">'+d.icon+'</span><span>'+d.name+'</span></div><div class="asset-sub">'+d.sub+'</div></div></div><a style="font-weight:900" href="'+fundLinks[d.name]+'" target="_blank">基準価額を確認</a></div>';
+      return;
+    }
+
+    if(!d.ok){
+      container.innerHTML += '<div class="asset-card"><div class="asset-card-top"><div><div class="asset-name"><span class="asset-emoji">'+d.icon+'</span><span>'+d.name+'</span></div><div class="asset-sub">'+d.sub+'</div></div><div class="asset-price">取得失敗</div></div><div class="asset-card-grid"><div class="asset-metric"><label>前日比</label><b>--</b></div><div class="asset-metric"><label>AI判断</label><b class="judge-watch">確認</b></div><div class="asset-metric"><label>前日終値</label><b>--</b></div></div></div>';
+      return;
+    }
+
+    const c = Number(d.change);
+    const ai = aiJudge(c, d.name);
+    const cCls = c >= 0 ? "up" : "down";
+    const sparkId = "mobile_spark_" + idx;
+
+    container.innerHTML += '<div class="asset-card '+(Math.abs(c)>=2?'alert-row':'')+'"><div class="asset-card-top"><div><div class="asset-name"><span class="asset-emoji">'+d.icon+'</span><span>'+d.name+'</span></div><div class="asset-sub">'+d.sub+'</div></div><div class="asset-price">'+fmtPrice(d.price)+'</div></div><svg class="spark" id="'+sparkId+'"></svg><div class="asset-card-grid"><div class="asset-metric"><label>前日比</label><b class="'+cCls+'">'+(c>=0?"+":"")+c.toFixed(2)+'%</b></div><div class="asset-metric"><label>AI判断</label><b class="'+ai.cls+'">'+ai.text+'</b></div><div class="asset-metric"><label>前日終値</label><b>'+fmtPrice(d.prev)+'</b></div></div></div>';
+    setTimeout(()=>drawSpark(sparkId, c), 0);
+  });
+}
+
 function renderPrices(){
   const table = document.getElementById("priceTable");
   table.innerHTML = '<tr><th>銘柄</th><th>現在価格</th><th>前日比(%)</th><th>AI判断</th><th>トレンド(5日風)</th><th>前日終値</th></tr>';
+
+  renderMobileCards();
 
   const valid = dataset.filter(x=>x.ok);
   let counts = {buy:0, watch:0, sell:0};
