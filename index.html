@@ -587,7 +587,7 @@ td:first-child,th:first-child{text-align:left}
     <div class="card section">
       <div class="section-title">
         <h2>マーケット一覧</h2>
-        <span class="badge">Yahoo Finance / 60秒更新</span>
+        <span class="badge">Cloudflare Worker JSONP / 60秒更新</span>
       </div>
       <div class="table-wrap">
         <table id="priceTable">
@@ -732,24 +732,44 @@ async function fetchAllQuotes(){
     .map(s => s.code)
     .join(",");
 
-  const url =
-    API_BASE + "/quotes?symbols=" + encodeURIComponent(codes);
+  return new Promise((resolve, reject) => {
+    const callbackName =
+      "jsonpCallback_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
 
-  const res = await fetch(url, {
-    cache: "no-store"
+    const script = document.createElement("script");
+
+    const cleanup = () => {
+      delete window[callbackName];
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
+
+    window[callbackName] = function(data){
+      cleanup();
+
+      if(data && data.error){
+        reject(new Error(data.error));
+        return;
+      }
+
+      resolve((data && data.quotes) ? data.quotes : []);
+    };
+
+    script.onerror = function(){
+      cleanup();
+      reject(new Error("JSONP取得失敗"));
+    };
+
+    script.src =
+      API_BASE +
+      "/quotes-jsonp?symbols=" +
+      encodeURIComponent(codes) +
+      "&callback=" +
+      encodeURIComponent(callbackName);
+
+    document.body.appendChild(script);
   });
-
-  if(!res.ok){
-    throw new Error("Worker取得失敗: " + res.status);
-  }
-
-  const json = await res.json();
-
-  if(json.error){
-    throw new Error(json.error);
-  }
-
-  return json.quotes || [];
 }
 
 async function loadPrices(){
