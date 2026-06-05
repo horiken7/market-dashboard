@@ -726,35 +726,68 @@ function drawSpark(svgId, change){
   svg.innerHTML = '<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>';
 }
 
-async function fetchQuote(symbol){
-  const res = await fetch(API_BASE + "/quote?symbol=" + encodeURIComponent(symbol));
-  if(!res.ok) throw new Error("Worker取得失敗: " + symbol);
-  const q = await res.json();
-  if(q.error) throw new Error(q.error);
-  return {
-    price: q.price,
-    change: q.changePercent,
-    prev: q.previousClose
-  };
+async function fetchAllQuotes(symbolList){
+  const codes = symbolList.filter(s => s.code).map(s => s.code).join(",");
+  const url = API_BASE + "/quotes?symbols=" + encodeURIComponent(codes);
+
+  const res = await fetch(url, { cache: "no-store" });
+  const text = await res.text();
+
+  if(!res.ok){
+    throw new Error("Worker取得失敗 " + res.status + ": " + text.slice(0,120));
+  }
+
+  let json;
+  try{
+    json = JSON.parse(text);
+  }catch(e){
+    throw new Error("JSON解析失敗: " + text.slice(0,120));
+  }
+
+  if(json.error) throw new Error(json.error);
+  return json.quotes || [];
 }
 
 async function loadPrices(){
   dataset = [];
-  for(const s of symbols){
-    if(!s.code){
-      dataset.push({ ...s, price:null, change:null, prev:null, ok:false, fund:true });
-      continue;
+
+  try{
+    const quotes = await fetchAllQuotes(symbols);
+    const quoteMap = new Map(quotes.map(q => [q.symbol, q]));
+
+    for(const s of symbols){
+      if(!s.code){
+        dataset.push({ ...s, price:null, change:null, prev:null, ok:false, fund:true });
+        continue;
+      }
+
+      const q = quoteMap.get(s.code);
+      if(!q){
+        dataset.push({ ...s, price:null, change:null, prev:null, ok:false, error:"データなし" });
+        continue;
+      }
+
+      dataset.push({
+        ...s,
+        price:q.price,
+        change:q.changePercent,
+        prev:q.previousClose,
+        ok:true
+      });
     }
-    try{
-      const q = await fetchQuote(s.code);
-      dataset.push({ ...s, price:q.price, change:q.change, prev:q.prev, ok:true });
-    }catch(e){
-      dataset.push({ ...s, price:null, change:null, prev:null, ok:false, error:e.message });
+  }catch(e){
+    for(const s of symbols){
+      if(!s.code){
+        dataset.push({ ...s, price:null, change:null, prev:null, ok:false, fund:true });
+      }else{
+        dataset.push({ ...s, price:null, change:null, prev:null, ok:false, error:e.message });
+      }
     }
+    console.error("価格取得エラー:", e);
   }
+
   renderPrices();
 }
-
 
 function renderMobileCards(){
   const container = document.getElementById("mobileAssetCards");
@@ -798,7 +831,7 @@ function renderPrices(){
       return;
     }
     if(!d.ok){
-      table.innerHTML += '<tr><td><div class="asset"><span class="asset-emoji">'+d.icon+'</span><div>'+d.name+'<small>'+d.sub+'</small></div></div></td><td>取得失敗</td><td>--</td><td class="judge-watch">確認</td><td>--</td><td>--</td></tr>';
+      table.innerHTML += '<tr><td><div class="asset"><span class="asset-emoji">'+d.icon+'</span><div>'+d.name+'<small>'+d.sub+'</small></div></div></td><td>取得失敗</td><td>--</td><td class="judge-watch" title="'+(d.error||'')+'">確認</td><td style="font-size:11px;color:#93a4bb">'+(d.error||'--').slice(0,42)+'</td><td>--</td></tr>';
       return;
     }
     const c = Number(d.change);
