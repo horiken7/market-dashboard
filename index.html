@@ -92,6 +92,22 @@ h1{
   white-space:nowrap;
   color:var(--text);
   font-weight:800;
+  border:0;
+  cursor:pointer;
+  background:transparent;
+  font:inherit;
+}
+.toggle.on::after{
+  right:2px;
+  left:auto;
+  background:#22c55e;
+  box-shadow:0 0 14px rgba(34,197,94,.8);
+}
+.toggle.off::after{
+  left:2px;
+  right:auto;
+  background:#64748b;
+  box-shadow:none;
 }
 .toggle{
   width:48px;height:24px;border-radius:999px;background:#123;
@@ -546,7 +562,7 @@ td:first-child,th:first-child{text-align:left}
       <div class="meta-block">最終更新<b id="lastUpdate">--</b></div>
       <div class="meta-block">次回更新まで<b id="countdown">--</b></div>
       <button class="update-btn" onclick="loadAll()">🔄 更新する</button>
-      <div class="switch">自動更新: ON <span class="toggle"></span></div>
+      <button id="autoToggle" class="switch" type="button" onclick="toggleAutoUpdate()">自動更新: <span id="autoStatus">ON</span> <span id="toggleKnob" class="toggle on"></span></button>
     </div>
   </div>
 </header>
@@ -618,6 +634,7 @@ td:first-child,th:first-child{text-align:left}
 const API_BASE = "https://market-dashboard.ken060720.workers.dev";
 const UPDATE_INTERVAL = 60;
 let secondsLeft = UPDATE_INTERVAL;
+let autoUpdateEnabled = true;
 
 const symbols = [
   {name:"USD/JPY", code:"JPY=X", icon:"🇺🇸", sub:"米ドル/円"},
@@ -911,18 +928,60 @@ async function loadNews(){
   }
 }
 
+
+function toggleAutoUpdate(){
+  autoUpdateEnabled = !autoUpdateEnabled;
+
+  const status = document.getElementById("autoStatus");
+  const knob = document.getElementById("toggleKnob");
+
+  if(status){
+    status.innerText = autoUpdateEnabled ? "ON" : "OFF";
+  }
+
+  if(knob){
+    knob.classList.toggle("on", autoUpdateEnabled);
+    knob.classList.toggle("off", !autoUpdateEnabled);
+  }
+
+  if(autoUpdateEnabled){
+    secondsLeft = UPDATE_INTERVAL;
+    const countdown = document.getElementById("countdown");
+    if(countdown){
+      countdown.innerText = "00:" + String(secondsLeft).padStart(2,"0");
+    }
+  }else{
+    const countdown = document.getElementById("countdown");
+    if(countdown){
+      countdown.innerText = "停止中";
+    }
+  }
+}
+
 async function loadAll(){
   secondsLeft = UPDATE_INTERVAL;
   await Promise.allSettled([loadPrices(), loadNews()]);
 }
 
 setInterval(()=>{
+  if(!autoUpdateEnabled){
+    const countdown = document.getElementById("countdown");
+    if(countdown){
+      countdown.innerText = "停止中";
+    }
+    return;
+  }
+
   secondsLeft--;
   if(secondsLeft <= 0){
     secondsLeft = UPDATE_INTERVAL;
     loadPrices();
   }
-  document.getElementById("countdown").innerText = "00:" + String(Math.max(0, secondsLeft)).padStart(2,"0");
+
+  const countdown = document.getElementById("countdown");
+  if(countdown){
+    countdown.innerText = "00:" + String(Math.max(0, secondsLeft)).padStart(2,"0");
+  }
 },1000);
 
 loadAll();
