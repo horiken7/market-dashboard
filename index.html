@@ -655,8 +655,8 @@ const symbols = [
   {name:"2244 Global X US Tech Top 20", code:"2244.T", icon:"📊", sub:"2244.T"},
   {name:"楽天グループ", code:"4755.T", icon:"🇯🇵", sub:"4755.T"},
   {name:"BTC/USD", code:"BTC-USD", icon:"₿", sub:"BTC-USD"},
-  {name:"eMAXIS Slim 全世界株式(除く日本)", code:null, icon:"🏦", sub:"投信"},
-  {name:"eMAXIS Slim S&P500", code:null, icon:"🏦", sub:"投信"}
+  {name:"eMAXIS Slim 全世界株式(除く日本)", code:null, fundCode:"0331218A", icon:"🏦", sub:"投信"},
+  {name:"eMAXIS Slim S&P500", code:null, fundCode:"03311187", icon:"🏦", sub:"投信"}
 ];
 
 const fundLinks = {
@@ -732,61 +732,105 @@ async function fetchAllQuotes(){
     .map(s => s.code)
     .join(",");
 
+  const data = await loadJsonp(
+    API_BASE + "/quotes-jsonp?symbols=" + encodeURIComponent(codes)
+  );
+
+  return data.quotes || [];
+}
+function loadJsonp(url, timeoutMs = 10000){
   return new Promise((resolve, reject) => {
-    const callbackName = "cb" + Date.now();
+    const callbackName = "cb" + Date.now() + "_" + Math.floor(Math.random() * 100000);
     const script = document.createElement("script");
 
     const timer = setTimeout(() => {
       delete window[callbackName];
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
+      if (script.parentNode) script.parentNode.removeChild(script);
       reject(new Error("JSONPタイムアウト"));
-    }, 10000);
+    }, timeoutMs);
 
     window[callbackName] = function(data){
       clearTimeout(timer);
       delete window[callbackName];
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
+      if (script.parentNode) script.parentNode.removeChild(script);
 
       if(data && data.error){
         reject(new Error(data.error));
         return;
       }
 
-      resolve((data && data.quotes) ? data.quotes : []);
+      resolve(data || {});
     };
 
     script.onerror = function(){
       clearTimeout(timer);
       delete window[callbackName];
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
+      if (script.parentNode) script.parentNode.removeChild(script);
       reject(new Error("JSONP読み込み失敗"));
     };
 
-    script.src =
-      API_BASE +
-      "/quotes-jsonp?symbols=" +
-      encodeURIComponent(codes) +
-      "&callback=" +
-      callbackName;
-
+    script.src = url + "&callback=" + callbackName;
     document.head.appendChild(script);
   });
 }
+
+async function fetchFunds(){
+  const fundCodes = symbols
+    .filter(s => s.fundCode)
+    .map(s => s.fundCode)
+    .join(",");
+
+  if(!fundCodes) return [];
+
+  const data = await loadJsonp(
+    API_BASE + "/funds-jsonp?codes=" + encodeURIComponent(fundCodes)
+  );
+
+  return data.funds || [];
+}
+
 
 async function loadPrices(){
   dataset = [];
 
   try{
-    const quotes = await fetchAllQuotes(symbols);
+    const [quotes, funds] = await Promise.all([
+      fetchAllQuotes(),
+      fetchFunds()
+    ]);
+
     const quoteMap = new Map(quotes.map(q => [q.symbol, q]));
+    const fundMap = new Map(funds.map(f => [f.code, f]));
 
     for(const s of symbols){
+      if(s.fundCode){
+        const f = fundMap.get(s.fundCode);
+
+        if(!f){
+          dataset.push({
+            ...s,
+            price:null,
+            change:null,
+            prev:null,
+            ok:false,
+            fund:true,
+            error:"投信データなし"
+          });
+          continue;
+        }
+
+        dataset.push({
+          ...s,
+          price:f.price,
+          change:f.changePercent,
+          prev:f.previousClose,
+          ok:true,
+          fund:true,
+          fundDate:f.date || null
+        });
+        continue;
+      }
+
       if(!s.code){
         dataset.push({ ...s, price:null, change:null, prev:null, ok:false, fund:true });
         continue;
@@ -808,11 +852,15 @@ async function loadPrices(){
     }
   }catch(e){
     for(const s of symbols){
-      if(!s.code){
-        dataset.push({ ...s, price:null, change:null, prev:null, ok:false, fund:true });
-      }else{
-        dataset.push({ ...s, price:null, change:null, prev:null, ok:false, error:e.message });
-      }
+      dataset.push({
+        ...s,
+        price:null,
+        change:null,
+        prev:null,
+        ok:false,
+        fund:!!s.fundCode,
+        error:e.message
+      });
     }
     console.error("価格取得エラー:", e);
   }
@@ -826,8 +874,16 @@ function renderMobileCards(){
   container.innerHTML = "";
 
   dataset.forEach((d, idx)=>{
+    if(d.fund && d.ok){
+      const c = Number(d.change || 0);
+      const ai = aiJudge(c, d.name);
+      const cCls = c >= 0 ? "up" : "down";
+      container.innerHTML += '<div class="asset-card '+(Math.abs(c)>=2?'alert-row':'')+'"><div class="asset-card-top"><div><div class="asset-name"><span class="asset-emoji">'+d.icon+'</span><span>'+d.name+'</span></div><div class="asset-sub">'+d.sub+(d.fundDate ? " / "+d.fundDate : "")+'</div></div><div class="asset-price">'+fmtPrice(d.price)+'</div></div><div class="asset-card-grid"><div class="asset-metric"><label>前日比</label><b class="'+cCls+'">'+(c>=0?"+":"")+c.toFixed(2)+'%</b></div><div class="asset-metric"><label>AI判断</label><b class="'+ai.cls+'">'+ai.text+'</b></div><div class="asset-metric"><label>前日終値</label><b>'+fmtPrice(d.prev)+'</b></div></div></div>';
+      return;
+    }
+
     if(d.fund){
-      container.innerHTML += '<div class="asset-card"><div class="asset-card-top"><div><div class="asset-name"><span class="asset-emoji">'+d.icon+'</span><span>'+d.name+'</span></div><div class="asset-sub">'+d.sub+'</div></div></div><a style="font-weight:900" href="'+fundLinks[d.name]+'" target="_blank">基準価額を確認</a></div>';
+      container.innerHTML += '<div class="asset-card"><div class="asset-card-top"><div><div class="asset-name"><span class="asset-emoji">'+d.icon+'</span><span>'+d.name+'</span></div><div class="asset-sub">'+d.sub+'</div></div><div class="asset-price">取得失敗</div></div><a style="font-weight:900" href="'+fundLinks[d.name]+'" target="_blank">基準価額を確認</a></div>';
       return;
     }
 
@@ -857,8 +913,18 @@ function renderPrices(){
   const total = valid.length || 1;
 
   dataset.forEach((d, idx)=>{
+    if(d.fund && d.ok){
+      const c = Number(d.change || 0);
+      const ai = aiJudge(c, d.name);
+      counts[ai.type]++;
+      const rowCls = Math.abs(c) >= 2 ? "alert-row" : "";
+      const cCls = c >= 0 ? "up" : "down";
+      table.innerHTML += '<tr class="'+rowCls+'"><td><div class="asset"><span class="asset-emoji">'+d.icon+'</span><div>'+d.name+'<small>'+d.sub+(d.fundDate ? " / "+d.fundDate : "")+'</small></div></div></td><td>'+fmtPrice(d.price)+'</td><td class="'+cCls+'">'+(c>=0?"+":"")+c.toFixed(2)+'%</td><td class="'+ai.cls+'">'+ai.text+'</td><td>投信基準価額</td><td>'+fmtPrice(d.prev)+'</td></tr>';
+      return;
+    }
+
     if(d.fund){
-      table.innerHTML += '<tr><td><div class="asset"><span class="asset-emoji">'+d.icon+'</span><div>'+d.name+'<small>'+d.sub+'</small></div></div></td><td colspan="5"><a style="font-weight:900" href="'+fundLinks[d.name]+'" target="_blank">基準価額を確認</a></td></tr>';
+      table.innerHTML += '<tr><td><div class="asset"><span class="asset-emoji">'+d.icon+'</span><div>'+d.name+'<small>'+d.sub+'</small></div></div></td><td>取得失敗</td><td>--</td><td class="judge-watch">確認</td><td style="font-size:11px;color:#93a4bb">'+(d.error||'--').slice(0,42)+'</td><td><a style="font-weight:900" href="'+fundLinks[d.name]+'" target="_blank">確認</a></td></tr>';
       return;
     }
     if(!d.ok){
